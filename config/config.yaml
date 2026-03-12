@@ -322,7 +322,7 @@ notification:
       webhook_url: ""                 # 钉钉机器人 webhook URL
 
     wework:
-      webhook_url: "https://qyapi.weixin.qq.com/cgi-bin/webhook/send?key=eea6c2cb-ee76-4a3d-903f-c859a763a5a8"
+      webhook_url: "https://qyapi.weixin.qq.com/cgi-bin/webhook/send?key=0530b7c5-571b-4be6-b0ce-d5695a4d2a4b"
       msg_type: "markdown"
 
     telegram:
