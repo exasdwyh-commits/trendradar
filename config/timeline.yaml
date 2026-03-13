@@ -395,8 +395,41 @@ presets:
 #     其余时间走默认配置（静默采集）
 
 custom:
-  name: "自定义"
-  description: "完全自由定义时间段、日计划和周映射。"
+  name: "每日9点"
+  description: "每天早上9点发送一次汇总"
+
+  default:
+    collect: true
+    analyze: false
+    ai_mode: "current"
+    push: false
+    report_mode: "daily"
+    once:
+      analyze: true
+      push: true
+
+  periods:
+    morning_9am:
+      name: "早上9点"
+      start: "09:00"
+      end: "10:00"
+      analyze: true
+      ai_mode: "daily"
+      push: true
+      report_mode: "daily"
+
+  day_plans:
+    every_day:
+      periods: ["morning_9am"]
+
+  week_map:
+    1: "every_day"
+    2: "every_day"
+    3: "every_day"
+    4: "every_day"
+    5: "every_day"
+    6: "every_day"
+    7: "every_day"
 
   # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
   # 默认配置
