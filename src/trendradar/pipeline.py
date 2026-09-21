@@ -3,11 +3,12 @@ from __future__ import annotations
 import hashlib
 import json
 import sqlite3
+import time
 import uuid
 from dataclasses import asdict
 from datetime import datetime, timezone
 
-from .cluster import cluster_titles
+from .cluster import similarity
 from .collect import Item, collect_source
 from .config import Source
 from .scoring import high_confidence_allowed
@@ -52,67 +53,136 @@ def store_item(conn: sqlite3.Connection, item: Item) -> bool:
     return conn.total_changes > before
 
 
+def _health_success(conn: sqlite3.Connection, source_id: str, item_count: int, latency_ms: int) -> None:
+    now = datetime.now(timezone.utc).isoformat()
+    conn.execute(
+        """
+        INSERT INTO source_health(source_id,last_attempt_at,last_success_at,last_error,consecutive_failures,last_item_count,latency_ms)
+        VALUES(?,?,?,NULL,0,?,?)
+        ON CONFLICT(source_id) DO UPDATE SET
+          last_attempt_at=excluded.last_attempt_at,last_success_at=excluded.last_success_at,
+          last_error=NULL,consecutive_failures=0,last_item_count=excluded.last_item_count,
+          latency_ms=excluded.latency_ms
+        """,
+        (source_id,now,now,item_count,latency_ms),
+    )
+
+
+def _health_failure(conn: sqlite3.Connection, source_id: str, error: str, latency_ms: int) -> None:
+    now = datetime.now(timezone.utc).isoformat()
+    conn.execute(
+        """
+        INSERT INTO source_health(source_id,last_attempt_at,last_error,consecutive_failures,last_item_count,latency_ms)
+        VALUES(?,?,?,1,0,?)
+        ON CONFLICT(source_id) DO UPDATE SET
+          last_attempt_at=excluded.last_attempt_at,last_error=excluded.last_error,
+          consecutive_failures=source_health.consecutive_failures+1,last_item_count=0,
+          latency_ms=excluded.latency_ms
+        """,
+        (source_id,now,error[:500],latency_ms),
+    )
+
+
 def collect_all(conn: sqlite3.Connection, sources: list[Source], timeout: float = 18, limit: int = 25) -> dict:
     stats = {"sources_ok": 0, "sources_failed": 0, "items_seen": 0, "items_new": 0, "failures": []}
     for source in sources:
         if not source.enabled:
             continue
+        started = time.perf_counter()
         try:
             items = collect_source(source, timeout=timeout, limit=limit)
+            latency = int((time.perf_counter() - started) * 1000)
+            _health_success(conn, source.id, len(items), latency)
             stats["sources_ok"] += 1
             for item in items:
                 stats["items_seen"] += 1
                 if store_item(conn, item):
                     stats["items_new"] += 1
         except Exception as exc:
+            latency = int((time.perf_counter() - started) * 1000)
+            _health_failure(conn, source.id, str(exc), latency)
             stats["sources_failed"] += 1
             stats["failures"].append({"source": source.id, "error": str(exc)[:180]})
+        conn.commit()
     return stats
 
 
-def rebuild_clusters(conn: sqlite3.Connection, lookback_limit: int = 500) -> int:
+def _existing_clusters(conn: sqlite3.Connection, lane: str) -> list[sqlite3.Row]:
+    return conn.execute(
+        """
+        SELECT sc.id,sc.canonical_title
+        FROM story_clusters sc
+        WHERE sc.lane=?
+        ORDER BY sc.updated_at DESC
+        LIMIT 200
+        """,
+        (lane,),
+    ).fetchall()
+
+
+def cluster_unassigned(conn: sqlite3.Connection, threshold: float = 0.42, limit: int = 800) -> int:
     rows = conn.execute(
         """
-        SELECT id,title FROM intelligence
-        WHERE origin='live'
-        ORDER BY COALESCE(published_at,collected_at) DESC
+        SELECT i.id,i.title,i.lane
+        FROM intelligence i
+        LEFT JOIN cluster_items ci ON ci.intelligence_id=i.id
+        WHERE ci.intelligence_id IS NULL AND i.origin='live'
+        ORDER BY COALESCE(i.published_at,i.collected_at) ASC
         LIMIT ?
         """,
-        (lookback_limit,),
+        (limit,),
     ).fetchall()
-    clusters = cluster_titles([(r["id"], r["title"]) for r in rows])
-    conn.execute("DELETE FROM cluster_items")
-    conn.execute("DELETE FROM story_clusters")
-    for cluster in clusters:
-        cluster_id = hashlib.sha256("|".join(sorted(cluster.item_ids)).encode()).hexdigest()[:24]
-        first = conn.execute("SELECT lane FROM intelligence WHERE id=?", (cluster.item_ids[0],)).fetchone()
+    created = 0
+    cache: dict[str, list] = {}
+    for row in rows:
+        lane = row["lane"]
+        candidates = cache.setdefault(lane, list(_existing_clusters(conn, lane)))
+        best = None
+        best_score = 0.0
+        for cluster in candidates:
+            score = similarity(row["title"], cluster["canonical_title"])
+            if score > best_score:
+                best, best_score = cluster, score
+        if best is not None and best_score >= threshold:
+            cluster_id = best["id"]
+        else:
+            cluster_id = hashlib.sha256(f"{lane}|{row['title'].lower()}".encode()).hexdigest()[:24]
+            conn.execute(
+                """
+                INSERT OR IGNORE INTO story_clusters(id,canonical_title,lane)
+                VALUES(?,?,?)
+                """,
+                (cluster_id,row["title"],lane),
+            )
+            candidates.append({"id": cluster_id, "canonical_title": row["title"]})
+            created += 1
         conn.execute(
-            "INSERT INTO story_clusters(id,canonical_title,lane) VALUES(?,?,?)",
-            (cluster_id, cluster.title, first["lane"]),
+            "INSERT OR IGNORE INTO cluster_items(cluster_id,intelligence_id) VALUES(?,?)",
+            (cluster_id,row["id"]),
         )
-        conn.executemany(
-            "INSERT INTO cluster_items(cluster_id,intelligence_id) VALUES(?,?)",
-            [(cluster_id, item_id) for item_id in cluster.item_ids],
+        conn.execute(
+            "UPDATE story_clusters SET updated_at=CURRENT_TIMESTAMP WHERE id=?",
+            (cluster_id,),
         )
     conn.commit()
-    return len(clusters)
+    return created
 
 
-def rebuild_candidates(conn: sqlite3.Connection) -> int:
+def upsert_candidates(conn: sqlite3.Connection) -> int:
     clusters = conn.execute(
         """
         SELECT sc.id,sc.canonical_title,sc.lane,
-               MAX(i.evidence_score) AS evidence,
-               MAX(i.freshness_score) AS freshness,
-               MAX(i.commercial_score) AS commercial,
-               COUNT(DISTINCT i.source_id) AS source_count
+               MAX(i.evidence_score) evidence,
+               MAX(i.freshness_score) freshness,
+               MAX(i.commercial_score) commercial,
+               COUNT(DISTINCT i.source_id) source_count
         FROM story_clusters sc
         JOIN cluster_items ci ON ci.cluster_id=sc.id
         JOIN intelligence i ON i.id=ci.intelligence_id
         GROUP BY sc.id
         """
     ).fetchall()
-    conn.execute("DELETE FROM candidates")
+    touched = 0
     for row in clusters:
         roles = {
             r["source_role"] for r in conn.execute(
@@ -130,26 +200,42 @@ def rebuild_candidates(conn: sqlite3.Connection) -> int:
         content = min(100.0, row["commercial"] * 0.60 + row["freshness"] * 0.25 + diversity_bonus)
         action = "WRITE" if evidence_ok and content >= 70 else "TRACK" if content >= 52 else "SKIP"
         cid = hashlib.sha256(f"candidate|{row['id']}".encode()).hexdigest()[:24]
-        conn.execute(
-            """
-            INSERT INTO candidates(
-              id,cluster_id,title,event_summary,cognition_score,content_score,action,generated_by
-            ) VALUES(?,?,?,?,?,?,?,'rule')
-            """,
-            (cid,row["id"],row["canonical_title"],row["canonical_title"],round(cognition,2),round(content,2),action),
-        )
+        existing = conn.execute("SELECT id FROM candidates WHERE id=?", (cid,)).fetchone()
+        if existing:
+            conn.execute(
+                """
+                UPDATE candidates SET
+                  title=?,cognition_score=?,content_score=?,
+                  action=CASE WHEN cognition_status='DONE' THEN action ELSE ? END,
+                  updated_at=CURRENT_TIMESTAMP
+                WHERE id=?
+                """,
+                (row["canonical_title"],round(cognition,2),round(content,2),action,cid),
+            )
+        else:
+            conn.execute(
+                """
+                INSERT INTO candidates(
+                  id,cluster_id,title,event_summary,cognition_score,content_score,action,generated_by
+                ) VALUES(?,?,?,?,?,?,?,'rule')
+                """,
+                (cid,row["id"],row["canonical_title"],row["canonical_title"],round(cognition,2),round(content,2),action),
+            )
+        touched += 1
     conn.commit()
-    return len(clusters)
+    return touched
 
 
 def today(conn: sqlite3.Connection, limit: int = 3) -> list[dict]:
     rows = conn.execute(
         """
         SELECT c.*,
-          (SELECT COUNT(*) FROM cluster_items ci WHERE ci.cluster_id=c.cluster_id) AS evidence_items
+          (SELECT COUNT(*) FROM cluster_items ci WHERE ci.cluster_id=c.cluster_id) evidence_items
         FROM candidates c
         WHERE c.action != 'SKIP'
-        ORDER BY c.content_score DESC, c.cognition_score DESC
+        ORDER BY
+          CASE c.action WHEN 'WRITE' THEN 0 WHEN 'TRACK' THEN 1 WHEN 'HOLD' THEN 2 ELSE 3 END,
+          c.content_score DESC,c.cognition_score DESC
         LIMIT ?
         """,
         (limit,),
@@ -158,6 +244,8 @@ def today(conn: sqlite3.Connection, limit: int = 3) -> list[dict]:
 
 
 def run_daily(conn: sqlite3.Connection, sources: list[Source], timeout: float = 18, limit: int = 25) -> dict:
+    from .cognition import analyze_pending
+
     run_id = uuid.uuid4().hex
     started = datetime.now(timezone.utc).isoformat()
     conn.execute(
@@ -167,9 +255,15 @@ def run_daily(conn: sqlite3.Connection, sources: list[Source], timeout: float = 
     conn.commit()
     try:
         collection = collect_all(conn, sources, timeout=timeout, limit=limit)
-        cluster_count = rebuild_clusters(conn)
-        candidate_count = rebuild_candidates(conn)
-        stats = {"collection": collection, "clusters": cluster_count, "candidates": candidate_count}
+        new_clusters = cluster_unassigned(conn)
+        candidate_count = upsert_candidates(conn)
+        cognition = analyze_pending(conn)
+        stats = {
+            "collection": collection,
+            "new_clusters": new_clusters,
+            "candidates_touched": candidate_count,
+            "cognition": cognition,
+        }
         conn.execute(
             "UPDATE runs SET finished_at=?,status='SUCCESS',stats_json=? WHERE id=?",
             (datetime.now(timezone.utc).isoformat(),json.dumps(stats,ensure_ascii=False),run_id),

@@ -14,6 +14,16 @@ CREATE TABLE IF NOT EXISTS sources (
   created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 
+CREATE TABLE IF NOT EXISTS source_health (
+  source_id TEXT PRIMARY KEY REFERENCES sources(id) ON DELETE CASCADE,
+  last_attempt_at TEXT,
+  last_success_at TEXT,
+  last_error TEXT,
+  consecutive_failures INTEGER NOT NULL DEFAULT 0,
+  last_item_count INTEGER NOT NULL DEFAULT 0,
+  latency_ms INTEGER
+);
+
 CREATE TABLE IF NOT EXISTS intelligence (
   id TEXT PRIMARY KEY,
   source_id TEXT NOT NULL REFERENCES sources(id),
@@ -50,12 +60,13 @@ CREATE TABLE IF NOT EXISTS story_clusters (
 CREATE TABLE IF NOT EXISTS cluster_items (
   cluster_id TEXT NOT NULL REFERENCES story_clusters(id) ON DELETE CASCADE,
   intelligence_id TEXT NOT NULL REFERENCES intelligence(id) ON DELETE CASCADE,
-  PRIMARY KEY(cluster_id, intelligence_id)
+  PRIMARY KEY(cluster_id, intelligence_id),
+  UNIQUE(intelligence_id)
 );
 
 CREATE TABLE IF NOT EXISTS candidates (
   id TEXT PRIMARY KEY,
-  cluster_id TEXT NOT NULL REFERENCES story_clusters(id),
+  cluster_id TEXT NOT NULL UNIQUE REFERENCES story_clusters(id),
   title TEXT NOT NULL,
   event_summary TEXT,
   what_changed TEXT,
@@ -64,14 +75,19 @@ CREATE TABLE IF NOT EXISTS candidates (
   who_benefits TEXT,
   who_loses TEXT,
   china_mapping TEXT,
+  strongest_counter TEXT,
   evidence_gap TEXT,
   cognition_score REAL NOT NULL DEFAULT 0,
   content_score REAL NOT NULL DEFAULT 0,
   action TEXT NOT NULL DEFAULT 'TRACK' CHECK(action IN ('WRITE','TRACK','HOLD','SKIP')),
+  cognition_status TEXT NOT NULL DEFAULT 'PENDING' CHECK(cognition_status IN ('PENDING','DONE','FAILED','SKIPPED')),
   generated_by TEXT NOT NULL DEFAULT 'rule',
   created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
   updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
+
+CREATE INDEX IF NOT EXISTS idx_candidates_action ON candidates(action, content_score DESC);
+CREATE INDEX IF NOT EXISTS idx_candidates_cognition ON candidates(cognition_status, cognition_score DESC);
 
 CREATE TABLE IF NOT EXISTS trends (
   id TEXT PRIMARY KEY,
@@ -111,6 +127,19 @@ CREATE TABLE IF NOT EXISTS trend_revisions (
   old_momentum TEXT,
   new_momentum TEXT,
   reason TEXT NOT NULL,
+  created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE IF NOT EXISTS world_model_updates (
+  id TEXT PRIMARY KEY,
+  period_start TEXT NOT NULL,
+  period_end TEXT NOT NULL,
+  strengthened_json TEXT NOT NULL DEFAULT '[]',
+  weakened_json TEXT NOT NULL DEFAULT '[]',
+  diverging_json TEXT NOT NULL DEFAULT '[]',
+  new_json TEXT NOT NULL DEFAULT '[]',
+  summary TEXT,
+  generated_by TEXT NOT NULL,
   created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 
