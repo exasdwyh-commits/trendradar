@@ -1,0 +1,29 @@
+app:
+  name: "硬币先生 · 商业趋势工作台"
+  timezone: "Asia/Shanghai"
+  daily_hour: 13
+  default_home_items: 3
+  max_home_items: 5
+
+collection:
+  request_timeout_seconds: 18
+  per_source_limit: 25
+  user_agent: "TrendRadar-Business/3.0 (+personal research)"
+  lookback_hours: 72
+
+quality:
+  min_evidence_score: 40
+  high_confidence_requires:
+    - PRIMARY
+    - VERIFIER
+  discovery_can_support_high_confidence_alone: false
+
+ranking:
+  cognition_pool_size: 12
+  content_pool_size: 8
+  homepage_items: 3
+
+editorial:
+  china_mapping_required_for_write: true
+  thesis_confirmation_required: true
+  max_title_options: 4

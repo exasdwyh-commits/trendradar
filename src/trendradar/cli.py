@@ -1,0 +1,68 @@
+from __future__ import annotations
+
+import argparse
+import json
+from pathlib import Path
+
+import uvicorn
+
+from .config import enabled_sources, load_sources, load_yaml
+from .db import connect, init_db
+from .pipeline import run_daily, sync_sources, today
+from .web import create_app
+
+
+def resolve(root: Path):
+    settings = load_yaml(root / "config" / "settings.yml")
+    sources = load_sources(root / "config" / "sources.yml")
+    db_path = root / "data" / "trendradar.db"
+    conn = connect(db_path)
+    init_db(conn, root / "schema.sql")
+    sync_sources(conn, sources)
+    return settings, sources, conn
+
+
+def main() -> None:
+    parser = argparse.ArgumentParser(prog="trendradar")
+    parser.add_argument("command", choices=["init","daily","status","serve"])
+    parser.add_argument("--root", default=".")
+    parser.add_argument("--port", type=int, default=8787)
+    args = parser.parse_args()
+
+    root = Path(args.root).resolve()
+    settings, sources, conn = resolve(root)
+
+    if args.command == "init":
+        print(json.dumps({
+            "ok": True,
+            "product": settings.get("app",{}).get("name"),
+            "enabled_sources": len(enabled_sources(sources)),
+        }, ensure_ascii=False, indent=2))
+        return
+
+    if args.command == "daily":
+        cfg = settings.get("collection",{})
+        stats = run_daily(
+            conn,
+            enabled_sources(sources),
+            timeout=float(cfg.get("request_timeout_seconds",18)),
+            limit=int(cfg.get("per_source_limit",25)),
+        )
+        print(json.dumps(stats, ensure_ascii=False, indent=2))
+        return
+
+    if args.command == "status":
+        counts = {}
+        for table in ["sources","intelligence","story_clusters","candidates","trends","articles"]:
+            counts[table] = conn.execute(f"SELECT COUNT(*) AS n FROM {table}").fetchone()["n"]
+        counts["today"] = today(conn, 3)
+        print(json.dumps(counts, ensure_ascii=False, indent=2))
+        return
+
+    if args.command == "serve":
+        uvicorn.run(create_app(root), host="127.0.0.1", port=args.port)
+        return
+
+
+if __name__ == "__main__":
+    main()
