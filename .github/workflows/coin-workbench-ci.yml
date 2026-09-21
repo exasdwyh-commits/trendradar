@@ -1,0 +1,42 @@
+name: coin-workbench-ci
+
+on:
+  push:
+    branches:
+      - feat/coin-intelligence-workbench-v3
+    paths:
+      - "coin-workbench/**"
+      - ".github/workflows/coin-workbench-ci.yml"
+  pull_request:
+    paths:
+      - "coin-workbench/**"
+      - ".github/workflows/coin-workbench-ci.yml"
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: coin-workbench
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install
+        run: |
+          python -m pip install --upgrade pip
+          pip install -e .
+          pip install pytest
+
+      - name: Unit tests
+        run: pytest -q
+
+      - name: Initialize database
+        run: coin-workbench init
+
+      - name: Source registry summary
+        run: coin-workbench status
