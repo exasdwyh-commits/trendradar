@@ -1,0 +1,233 @@
+version: 1
+
+# source_role:
+#   PRIMARY      第一方/官方/原始数据，优先作为事实依据
+#   VERIFIER     高质量媒体或研究机构，用于独立验证
+#   DISCOVERY    社区、作者、论坛，只用于发现线索，不单独支撑高置信结论
+#
+# lanes: TECHNOLOGY | BUSINESS | LIVELIHOOD | SOCIETY
+
+sources:
+  # ---------- AI / Technology: primary ----------
+  - id: openai-news
+    name: OpenAI News
+    lane: TECHNOLOGY
+    role: PRIMARY
+    type: page
+    url: https://openai.com/news/
+
+  - id: anthropic-news
+    name: Anthropic News
+    lane: TECHNOLOGY
+    role: PRIMARY
+    type: page
+    url: https://www.anthropic.com/news
+
+  - id: google-deepmind
+    name: Google DeepMind
+    lane: TECHNOLOGY
+    role: PRIMARY
+    type: page
+    url: https://deepmind.google/discover/blog/
+
+  - id: nvidia-blog
+    name: NVIDIA Blog
+    lane: TECHNOLOGY
+    role: PRIMARY
+    type: page
+    url: https://blogs.nvidia.com/
+
+  - id: microsoft-ai
+    name: Microsoft AI Blog
+    lane: TECHNOLOGY
+    role: PRIMARY
+    type: page
+    url: https://blogs.microsoft.com/ai/
+
+  - id: meta-ai
+    name: Meta AI
+    lane: TECHNOLOGY
+    role: PRIMARY
+    type: page
+    url: https://ai.meta.com/blog/
+
+  - id: huggingface-blog
+    name: Hugging Face Blog
+    lane: TECHNOLOGY
+    role: PRIMARY
+    type: page
+    url: https://huggingface.co/blog
+
+  # ---------- Business / company evidence ----------
+  - id: sec-edgar
+    name: SEC EDGAR
+    lane: BUSINESS
+    role: PRIMARY
+    type: page
+    url: https://www.sec.gov/edgar/search/
+
+  - id: ycombinator-companies
+    name: Y Combinator Companies
+    lane: BUSINESS
+    role: PRIMARY
+    type: page
+    url: https://www.ycombinator.com/companies
+
+  - id: techcrunch
+    name: TechCrunch
+    lane: BUSINESS
+    role: VERIFIER
+    type: rss
+    url: https://techcrunch.com/feed/
+
+  - id: reuters-technology
+    name: Reuters Technology
+    lane: BUSINESS
+    role: VERIFIER
+    type: page
+    url: https://www.reuters.com/technology/
+
+  - id: reuters-business
+    name: Reuters Business
+    lane: BUSINESS
+    role: VERIFIER
+    type: page
+    url: https://www.reuters.com/business/
+
+  # ---------- Economy / ordinary people ----------
+  - id: us-bls
+    name: U.S. Bureau of Labor Statistics
+    lane: LIVELIHOOD
+    role: PRIMARY
+    type: page
+    url: https://www.bls.gov/
+
+  - id: us-bea
+    name: U.S. Bureau of Economic Analysis
+    lane: LIVELIHOOD
+    role: PRIMARY
+    type: page
+    url: https://www.bea.gov/
+
+  - id: us-census
+    name: U.S. Census Bureau
+    lane: SOCIETY
+    role: PRIMARY
+    type: page
+    url: https://www.census.gov/
+
+  - id: eurostat
+    name: Eurostat
+    lane: LIVELIHOOD
+    role: PRIMARY
+    type: page
+    url: https://ec.europa.eu/eurostat/
+
+  - id: oecd
+    name: OECD
+    lane: LIVELIHOOD
+    role: PRIMARY
+    type: page
+    url: https://www.oecd.org/
+
+  - id: world-bank
+    name: World Bank
+    lane: SOCIETY
+    role: PRIMARY
+    type: page
+    url: https://www.worldbank.org/
+
+  - id: imf
+    name: IMF
+    lane: BUSINESS
+    role: PRIMARY
+    type: page
+    url: https://www.imf.org/
+
+  - id: ilo
+    name: International Labour Organization
+    lane: LIVELIHOOD
+    role: PRIMARY
+    type: page
+    url: https://www.ilo.org/
+
+  # ---------- China mapping ----------
+  - id: china-nbs
+    name: 国家统计局
+    lane: LIVELIHOOD
+    role: PRIMARY
+    type: page
+    url: https://www.stats.gov.cn/
+
+  - id: pboc
+    name: 中国人民银行
+    lane: BUSINESS
+    role: PRIMARY
+    type: page
+    url: http://www.pbc.gov.cn/
+
+  - id: china-customs
+    name: 海关总署
+    lane: BUSINESS
+    role: PRIMARY
+    type: page
+    url: http://www.customs.gov.cn/
+
+  # ---------- Independent analysis ----------
+  - id: stratechery
+    name: Stratechery
+    lane: BUSINESS
+    role: VERIFIER
+    type: page
+    url: https://stratechery.com/
+
+  - id: works-in-progress
+    name: Works in Progress
+    lane: SOCIETY
+    role: VERIFIER
+    type: page
+    url: https://worksinprogress.co/
+
+  - id: construction-physics
+    name: Construction Physics
+    lane: BUSINESS
+    role: VERIFIER
+    type: page
+    url: https://www.construction-physics.com/
+
+  # ---------- Discovery only ----------
+  - id: hacker-news
+    name: Hacker News
+    lane: TECHNOLOGY
+    role: DISCOVERY
+    type: rss
+    url: https://hnrss.org/frontpage
+
+  - id: reddit-localllama
+    name: Reddit LocalLLaMA
+    lane: TECHNOLOGY
+    role: DISCOVERY
+    type: rss
+    url: https://www.reddit.com/r/LocalLLaMA/.rss
+
+  - id: reddit-startups
+    name: Reddit startups
+    lane: BUSINESS
+    role: DISCOVERY
+    type: rss
+    url: https://www.reddit.com/r/startups/.rss
+
+  - id: reddit-smallbusiness
+    name: Reddit smallbusiness
+    lane: BUSINESS
+    role: DISCOVERY
+    type: rss
+    url: https://www.reddit.com/r/smallbusiness/.rss
+
+policy:
+  homepage_max_items: 5
+  default_homepage_items: 3
+  discovery_source_can_support_fact_alone: false
+  require_primary_or_verifier_for_high_confidence: true
+  cross_source_event_dedupe: true
+  china_mapping_required_for_publish_candidate: true
