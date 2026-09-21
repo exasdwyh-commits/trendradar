@@ -48,6 +48,7 @@ def main() -> None:
             timeout=float(cfg.get("request_timeout_seconds",18)),
             limit=int(cfg.get("per_source_limit",18)),
             enrich_limit=int(cfg.get("article_enrich_limit",6)),
+            output_dir=root / "output" / "daily",
         )
 
     if args.command == "init":
