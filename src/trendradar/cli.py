@@ -8,7 +8,10 @@ import uvicorn
 
 from .config import enabled_sources, load_sources, load_yaml
 from .db import connect, init_db
+from .exporter import export_markdown, export_wechat_html
 from .pipeline import run_daily, sync_sources, today
+from .scheduler import daemon
+from .trends import world_model_update
 from .web import create_app
 
 
@@ -24,13 +27,26 @@ def resolve(root: Path):
 
 def main() -> None:
     parser = argparse.ArgumentParser(prog="trendradar")
-    parser.add_argument("command", choices=["init","daily","status","serve"])
+    parser.add_argument(
+        "command",
+        choices=["init","daily","status","serve","daemon","world-model","export-md","export-wechat"],
+    )
+    parser.add_argument("target", nargs="?")
     parser.add_argument("--root", default=".")
     parser.add_argument("--port", type=int, default=8787)
     args = parser.parse_args()
 
     root = Path(args.root).resolve()
     settings, sources, conn = resolve(root)
+
+    def tick():
+        cfg = settings.get("collection",{})
+        return run_daily(
+            conn,
+            enabled_sources(sources),
+            timeout=float(cfg.get("request_timeout_seconds",18)),
+            limit=int(cfg.get("per_source_limit",25)),
+        )
 
     if args.command == "init":
         print(json.dumps({
@@ -41,19 +57,16 @@ def main() -> None:
         return
 
     if args.command == "daily":
-        cfg = settings.get("collection",{})
-        stats = run_daily(
-            conn,
-            enabled_sources(sources),
-            timeout=float(cfg.get("request_timeout_seconds",18)),
-            limit=int(cfg.get("per_source_limit",25)),
-        )
-        print(json.dumps(stats, ensure_ascii=False, indent=2))
+        print(json.dumps(tick(), ensure_ascii=False, indent=2))
+        return
+
+    if args.command == "world-model":
+        print(json.dumps(world_model_update(conn), ensure_ascii=False, indent=2))
         return
 
     if args.command == "status":
         counts = {}
-        for table in ["sources","intelligence","story_clusters","candidates","trends","articles"]:
+        for table in ["sources","intelligence","story_clusters","candidates","trends","research","theses","articles"]:
             counts[table] = conn.execute(f"SELECT COUNT(*) AS n FROM {table}").fetchone()["n"]
         counts["today"] = today(conn, 3)
         print(json.dumps(counts, ensure_ascii=False, indent=2))
@@ -61,6 +74,23 @@ def main() -> None:
 
     if args.command == "serve":
         uvicorn.run(create_app(root), host="127.0.0.1", port=args.port)
+        return
+
+    if args.command == "daemon":
+        app_cfg = settings.get("app",{})
+        daemon(
+            tick,
+            conn,
+            timezone_name=app_cfg.get("timezone","Asia/Shanghai"),
+            hour=int(app_cfg.get("daily_hour",13)),
+        )
+        return
+
+    if args.command in {"export-md","export-wechat"}:
+        if not args.target:
+            raise SystemExit("article id required")
+        fn = export_markdown if args.command == "export-md" else export_wechat_html
+        print(fn(conn, args.target, root / "output"))
         return
 
 

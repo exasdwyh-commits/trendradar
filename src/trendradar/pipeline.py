@@ -148,10 +148,7 @@ def cluster_unassigned(conn: sqlite3.Connection, threshold: float = 0.42, limit:
         else:
             cluster_id = hashlib.sha256(f"{lane}|{row['title'].lower()}".encode()).hexdigest()[:24]
             conn.execute(
-                """
-                INSERT OR IGNORE INTO story_clusters(id,canonical_title,lane)
-                VALUES(?,?,?)
-                """,
+                "INSERT OR IGNORE INTO story_clusters(id,canonical_title,lane) VALUES(?,?,?)",
                 (cluster_id,row["title"],lane),
             )
             candidates.append({"id": cluster_id, "canonical_title": row["title"]})
@@ -160,10 +157,13 @@ def cluster_unassigned(conn: sqlite3.Connection, threshold: float = 0.42, limit:
             "INSERT OR IGNORE INTO cluster_items(cluster_id,intelligence_id) VALUES(?,?)",
             (cluster_id,row["id"]),
         )
-        conn.execute(
-            "UPDATE story_clusters SET updated_at=CURRENT_TIMESTAMP WHERE id=?",
-            (cluster_id,),
-        )
+        conn.execute("UPDATE story_clusters SET updated_at=CURRENT_TIMESTAMP WHERE id=?", (cluster_id,))
+        existing_candidate = conn.execute("SELECT id FROM candidates WHERE cluster_id=?", (cluster_id,)).fetchone()
+        if existing_candidate:
+            conn.execute(
+                "UPDATE candidates SET cognition_status='PENDING',updated_at=CURRENT_TIMESTAMP WHERE cluster_id=?",
+                (cluster_id,),
+            )
     conn.commit()
     return created
 
@@ -200,7 +200,7 @@ def upsert_candidates(conn: sqlite3.Connection) -> int:
         content = min(100.0, row["commercial"] * 0.60 + row["freshness"] * 0.25 + diversity_bonus)
         action = "WRITE" if evidence_ok and content >= 70 else "TRACK" if content >= 52 else "SKIP"
         cid = hashlib.sha256(f"candidate|{row['id']}".encode()).hexdigest()[:24]
-        existing = conn.execute("SELECT id FROM candidates WHERE id=?", (cid,)).fetchone()
+        existing = conn.execute("SELECT id,cognition_status FROM candidates WHERE id=?", (cid,)).fetchone()
         if existing:
             conn.execute(
                 """
@@ -245,6 +245,7 @@ def today(conn: sqlite3.Connection, limit: int = 3) -> list[dict]:
 
 def run_daily(conn: sqlite3.Connection, sources: list[Source], timeout: float = 18, limit: int = 25) -> dict:
     from .cognition import analyze_pending
+    from .trends import world_model_update
 
     run_id = uuid.uuid4().hex
     started = datetime.now(timezone.utc).isoformat()
@@ -258,11 +259,13 @@ def run_daily(conn: sqlite3.Connection, sources: list[Source], timeout: float = 
         new_clusters = cluster_unassigned(conn)
         candidate_count = upsert_candidates(conn)
         cognition = analyze_pending(conn)
+        world_model = world_model_update(conn)
         stats = {
             "collection": collection,
             "new_clusters": new_clusters,
             "candidates_touched": candidate_count,
             "cognition": cognition,
+            "world_model": world_model,
         }
         conn.execute(
             "UPDATE runs SET finished_at=?,status='SUCCESS',stats_json=? WHERE id=?",
