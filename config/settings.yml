@@ -7,7 +7,8 @@ app:
 
 collection:
   request_timeout_seconds: 18
-  per_source_limit: 25
+  per_source_limit: 18
+  article_enrich_limit: 6
   user_agent: "TrendRadar-Business/3.0 (+personal research)"
   lookback_hours: 72
 

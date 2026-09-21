@@ -40,10 +40,10 @@ def store_item(conn: sqlite3.Connection, item: Item) -> bool:
     conn.execute(
         """
         INSERT OR IGNORE INTO intelligence(
-          id,source_id,title,url,canonical_url,published_at,summary,kind,
+          id,source_id,title,url,canonical_url,published_at,summary,content,kind,
           source_role,lane,freshness_score,evidence_score,commercial_score,title_hash
         ) VALUES(
-          :id,:source_id,:title,:url,:canonical_url,:published_at,:summary,'CLAIM',
+          :id,:source_id,:title,:url,:canonical_url,:published_at,:summary,:content,'CLAIM',
           :source_role,:lane,:freshness_score,:evidence_score,:commercial_score,:title_hash
         )
         """,
@@ -83,14 +83,20 @@ def _health_failure(conn: sqlite3.Connection, source_id: str, error: str, latenc
     )
 
 
-def collect_all(conn: sqlite3.Connection, sources: list[Source], timeout: float = 18, limit: int = 25) -> dict:
+def collect_all(
+    conn: sqlite3.Connection,
+    sources: list[Source],
+    timeout: float = 18,
+    limit: int = 18,
+    enrich_limit: int = 6,
+) -> dict:
     stats = {"sources_ok": 0, "sources_failed": 0, "items_seen": 0, "items_new": 0, "failures": []}
     for source in sources:
         if not source.enabled:
             continue
         started = time.perf_counter()
         try:
-            items = collect_source(source, timeout=timeout, limit=limit)
+            items = collect_source(source, timeout=timeout, limit=limit, enrich_limit=enrich_limit)
             latency = int((time.perf_counter() - started) * 1000)
             _health_success(conn, source.id, len(items), latency)
             stats["sources_ok"] += 1
@@ -158,8 +164,7 @@ def cluster_unassigned(conn: sqlite3.Connection, threshold: float = 0.42, limit:
             (cluster_id,row["id"]),
         )
         conn.execute("UPDATE story_clusters SET updated_at=CURRENT_TIMESTAMP WHERE id=?", (cluster_id,))
-        existing_candidate = conn.execute("SELECT id FROM candidates WHERE cluster_id=?", (cluster_id,)).fetchone()
-        if existing_candidate:
+        if conn.execute("SELECT id FROM candidates WHERE cluster_id=?", (cluster_id,)).fetchone():
             conn.execute(
                 "UPDATE candidates SET cognition_status='PENDING',updated_at=CURRENT_TIMESTAMP WHERE cluster_id=?",
                 (cluster_id,),
@@ -243,7 +248,14 @@ def today(conn: sqlite3.Connection, limit: int = 3) -> list[dict]:
     return [dict(r) for r in rows]
 
 
-def run_daily(conn: sqlite3.Connection, sources: list[Source], timeout: float = 18, limit: int = 25) -> dict:
+def run_daily(
+    conn: sqlite3.Connection,
+    sources: list[Source],
+    timeout: float = 18,
+    limit: int = 18,
+    enrich_limit: int = 6,
+) -> dict:
+    from .brief import write_daily_brief
     from .cognition import analyze_pending
     from .trends import world_model_update
 
@@ -255,17 +267,19 @@ def run_daily(conn: sqlite3.Connection, sources: list[Source], timeout: float = 
     )
     conn.commit()
     try:
-        collection = collect_all(conn, sources, timeout=timeout, limit=limit)
+        collection = collect_all(conn, sources, timeout=timeout, limit=limit, enrich_limit=enrich_limit)
         new_clusters = cluster_unassigned(conn)
         candidate_count = upsert_candidates(conn)
         cognition = analyze_pending(conn)
         world_model = world_model_update(conn)
+        brief_path = write_daily_brief(conn, "output/daily")
         stats = {
             "collection": collection,
             "new_clusters": new_clusters,
             "candidates_touched": candidate_count,
             "cognition": cognition,
             "world_model": world_model,
+            "daily_brief": str(brief_path),
         }
         conn.execute(
             "UPDATE runs SET finished_at=?,status='SUCCESS',stats_json=? WHERE id=?",

@@ -6,6 +6,7 @@ from pathlib import Path
 
 import uvicorn
 
+from .brief import write_daily_brief
 from .config import enabled_sources, load_sources, load_yaml
 from .db import connect, init_db
 from .exporter import export_markdown, export_wechat_html
@@ -29,7 +30,7 @@ def main() -> None:
     parser = argparse.ArgumentParser(prog="trendradar")
     parser.add_argument(
         "command",
-        choices=["init","daily","status","serve","daemon","world-model","export-md","export-wechat"],
+        choices=["init","daily","status","serve","daemon","world-model","brief","export-md","export-wechat"],
     )
     parser.add_argument("target", nargs="?")
     parser.add_argument("--root", default=".")
@@ -45,7 +46,8 @@ def main() -> None:
             conn,
             enabled_sources(sources),
             timeout=float(cfg.get("request_timeout_seconds",18)),
-            limit=int(cfg.get("per_source_limit",25)),
+            limit=int(cfg.get("per_source_limit",18)),
+            enrich_limit=int(cfg.get("article_enrich_limit",6)),
         )
 
     if args.command == "init":
@@ -62,6 +64,10 @@ def main() -> None:
 
     if args.command == "world-model":
         print(json.dumps(world_model_update(conn), ensure_ascii=False, indent=2))
+        return
+
+    if args.command == "brief":
+        print(write_daily_brief(conn, root / "output" / "daily"))
         return
 
     if args.command == "status":
