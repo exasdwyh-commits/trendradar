@@ -206,6 +206,92 @@ CREATE TABLE IF NOT EXISTS judgement_ledger (
   created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 
+CREATE TABLE IF NOT EXISTS documents (
+  id TEXT PRIMARY KEY,
+  article_id TEXT UNIQUE REFERENCES articles(id) ON DELETE SET NULL,
+  candidate_id TEXT REFERENCES candidates(id) ON DELETE SET NULL,
+  thesis_id TEXT REFERENCES theses(id) ON DELETE SET NULL,
+  title TEXT NOT NULL DEFAULT '未命名文章',
+  status TEXT NOT NULL DEFAULT 'DRAFT' CHECK(status IN ('IDEA','DRAFT','REVIEW','READY','ARCHIVED')),
+  current_version INTEGER NOT NULL DEFAULT 0,
+  created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE IF NOT EXISTS document_versions (
+  id TEXT PRIMARY KEY,
+  document_id TEXT NOT NULL REFERENCES documents(id) ON DELETE CASCADE,
+  version_number INTEGER NOT NULL,
+  title TEXT NOT NULL,
+  content_json TEXT NOT NULL DEFAULT '{}',
+  content_html TEXT NOT NULL DEFAULT '',
+  plain_text TEXT NOT NULL DEFAULT '',
+  source TEXT NOT NULL DEFAULT 'MANUAL' CHECK(source IN ('AI_DRAFT','MANUAL','AI_EDIT','IMPORT','RESTORE')),
+  note TEXT,
+  created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  UNIQUE(document_id, version_number)
+);
+
+CREATE INDEX IF NOT EXISTS idx_doc_versions ON document_versions(document_id, version_number DESC);
+
+CREATE TABLE IF NOT EXISTS evidence_links (
+  id TEXT PRIMARY KEY,
+  document_id TEXT NOT NULL REFERENCES documents(id) ON DELETE CASCADE,
+  intelligence_id TEXT NOT NULL REFERENCES intelligence(id) ON DELETE CASCADE,
+  text_anchor TEXT,
+  relation TEXT NOT NULL DEFAULT 'SUPPORT' CHECK(relation IN ('SUPPORT','COUNTER','CONTEXT')),
+  note TEXT,
+  created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  UNIQUE(document_id, intelligence_id, text_anchor)
+);
+
+CREATE TABLE IF NOT EXISTS media_assets (
+  id TEXT PRIMARY KEY,
+  document_id TEXT REFERENCES documents(id) ON DELETE CASCADE,
+  asset_type TEXT NOT NULL CHECK(asset_type IN ('COVER','PHOTO','DATA_CHART','DIAGRAM','SCREENSHOT','ILLUSTRATION')),
+  role TEXT NOT NULL DEFAULT 'INLINE' CHECK(role IN ('COVER','INLINE','REFERENCE')),
+  title TEXT NOT NULL,
+  brief TEXT,
+  placement TEXT,
+  prompt TEXT,
+  aspect_ratio TEXT,
+  source_url TEXT,
+  local_path TEXT,
+  status TEXT NOT NULL DEFAULT 'SUGGESTED' CHECK(status IN ('SUGGESTED','READY','USED','REJECTED')),
+  generated_by TEXT,
+  created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE IF NOT EXISTS platform_variants (
+  id TEXT PRIMARY KEY,
+  document_id TEXT NOT NULL REFERENCES documents(id) ON DELETE CASCADE,
+  platform TEXT NOT NULL CHECK(platform IN ('WECHAT','XIAOHONGSHU','ZHIHU','TOUTIAO','X')),
+  title TEXT NOT NULL,
+  content_text TEXT NOT NULL DEFAULT '',
+  content_html TEXT NOT NULL DEFAULT '',
+  metadata_json TEXT NOT NULL DEFAULT '{}',
+  status TEXT NOT NULL DEFAULT 'DRAFT' CHECK(status IN ('DRAFT','READY','PUBLISHED','ARCHIVED')),
+  generated_by TEXT,
+  created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE INDEX IF NOT EXISTS idx_variants_document ON platform_variants(document_id, platform);
+
+CREATE TABLE IF NOT EXISTS publications (
+  id TEXT PRIMARY KEY,
+  variant_id TEXT NOT NULL REFERENCES platform_variants(id) ON DELETE CASCADE,
+  platform TEXT NOT NULL,
+  status TEXT NOT NULL DEFAULT 'READY' CHECK(status IN ('READY','SCHEDULED','PUBLISHED','FAILED')),
+  scheduled_at TEXT,
+  published_at TEXT,
+  external_url TEXT,
+  metrics_json TEXT NOT NULL DEFAULT '{}',
+  error TEXT,
+  created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+
 CREATE TABLE IF NOT EXISTS runs (
   id TEXT PRIMARY KEY,
   run_type TEXT NOT NULL,

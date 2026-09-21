@@ -4,6 +4,7 @@ import json
 import sqlite3
 import uuid
 
+from .content import ensure_document_for_article
 from .llm import chat_json
 from .prompts import CRITIC_SYSTEM, RESEARCH_SYSTEM, THESIS_SYSTEM, WRITER_SYSTEM
 
@@ -14,7 +15,7 @@ def candidate_material(conn: sqlite3.Connection, candidate_id: str) -> dict:
         raise KeyError("candidate not found")
     sources = conn.execute(
         """
-        SELECT i.id,i.title,i.url,i.summary,i.kind,i.source_role,i.source_id,i.published_at,
+        SELECT i.id,i.title,i.url,i.summary,i.content,i.kind,i.source_role,i.source_id,i.published_at,
                i.evidence_score,i.commercial_score
         FROM cluster_items ci
         JOIN intelligence i ON i.id=ci.intelligence_id
@@ -94,19 +95,6 @@ def propose_thesis(conn: sqlite3.Connection, candidate_id: str) -> str:
     return tid
 
 
-def create_thesis(conn: sqlite3.Connection, candidate_id: str, thesis: str, generated_by: str = "human") -> str:
-    tid = uuid.uuid4().hex
-    conn.execute(
-        """
-        INSERT INTO theses(id,candidate_id,thesis,status,generated_by)
-        VALUES(?,?,?,'PENDING',?)
-        """,
-        (tid,candidate_id,thesis,generated_by),
-    )
-    conn.commit()
-    return tid
-
-
 def confirm_thesis(conn: sqlite3.Connection, thesis_id: str, horizon: str = "12个月") -> str:
     thesis = conn.execute("SELECT * FROM theses WHERE id=?", (thesis_id,)).fetchone()
     if not thesis:
@@ -136,7 +124,7 @@ def hold_thesis(conn: sqlite3.Connection, thesis_id: str) -> None:
     conn.commit()
 
 
-def draft_article(conn: sqlite3.Connection, thesis_id: str) -> str:
+def draft_article(conn: sqlite3.Connection, thesis_id: str) -> tuple[str,str]:
     thesis = conn.execute("SELECT * FROM theses WHERE id=?", (thesis_id,)).fetchone()
     if not thesis:
         raise KeyError("thesis not found")
@@ -161,7 +149,8 @@ def draft_article(conn: sqlite3.Connection, thesis_id: str) -> str:
         ),
     )
     conn.commit()
-    return aid
+    document_id=ensure_document_for_article(conn,aid)
+    return aid,document_id
 
 
 def challenge_article(conn: sqlite3.Connection, article_id: str) -> str:
@@ -192,24 +181,22 @@ def challenge_article(conn: sqlite3.Connection, article_id: str) -> str:
             model,
         ),
     )
-    if verdict == "PASS":
-        conn.execute("UPDATE articles SET status='READY',updated_at=CURRENT_TIMESTAMP WHERE id=?", (article_id,))
-    else:
-        conn.execute("UPDATE articles SET status='CHALLENGE',updated_at=CURRENT_TIMESTAMP WHERE id=?", (article_id,))
+    conn.execute(
+        "UPDATE articles SET status=?,updated_at=CURRENT_TIMESTAMP WHERE id=?",
+        ("READY" if verdict=="PASS" else "CHALLENGE",article_id),
+    )
     conn.commit()
     return review_id
-
-
-def mark_article_ready(conn: sqlite3.Connection, article_id: str) -> None:
-    conn.execute("UPDATE articles SET status='READY',updated_at=CURRENT_TIMESTAMP WHERE id=?", (article_id,))
-    conn.commit()
 
 
 def article_detail(conn: sqlite3.Connection, article_id: str) -> dict | None:
     row = conn.execute(
         """
-        SELECT a.*,t.thesis,t.status thesis_status
-        FROM articles a JOIN theses t ON t.id=a.thesis_id WHERE a.id=?
+        SELECT a.*,t.thesis,t.status thesis_status,d.id document_id
+        FROM articles a
+        JOIN theses t ON t.id=a.thesis_id
+        LEFT JOIN documents d ON d.article_id=a.id
+        WHERE a.id=?
         """,
         (article_id,),
     ).fetchone()
