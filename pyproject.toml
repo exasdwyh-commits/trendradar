@@ -1,7 +1,7 @@
 [project]
 name = "trendradar"
-version = "3.0.0"
-description = "Business intelligence and WeChat content workbench"
+version = "3.1.0"
+description = "Business cognition, content studio and multi-platform publishing workbench"
 requires-python = ">=3.11"
 dependencies = [
   "beautifulsoup4>=4.12.3",
