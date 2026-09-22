@@ -1,6 +1,7 @@
 import sqlite3
 from pathlib import Path
 
+import trendradar.content as content_mod
 from trendradar.content import create_blank_document, get_document, restore_version, save_document
 from trendradar.db import init_db
 
@@ -38,3 +39,43 @@ def test_save_and_restore_are_append_only():
     doc=get_document(conn,doc_id)
     assert doc["current_version"]==3
     assert len(doc["versions"])==3
+
+
+
+def test_image_plan_rejects_untraceable_data_chart(monkeypatch):
+    conn=db()
+    doc_id=create_blank_document(conn,"测试文章")
+    monkeypatch.setattr(content_mod,"slot_enabled",lambda name: True)
+    monkeypatch.setattr(
+        content_mod,
+        "chat_json",
+        lambda *args,**kwargs: ({
+            "items":[
+                {
+                    "type":"DATA_CHART",
+                    "title":"虚构数据图",
+                    "brief":"没有来源的数据",
+                    "placement":"正文",
+                    "aspect_ratio":"16:9",
+                    "prompt":"",
+                    "evidence_ids":["fake-id"],
+                },
+                {
+                    "type":"DIAGRAM",
+                    "title":"机制图",
+                    "brief":"只解释逻辑，不补造数字",
+                    "placement":"正文",
+                    "aspect_ratio":"16:9",
+                    "prompt":"Draw a conceptual mechanism diagram without invented metrics.",
+                    "evidence_ids":[],
+                },
+            ]
+        },"writer-model"),
+    )
+
+    items=content_mod.create_image_plan(conn,doc_id)
+    assert len(items)==1
+    assert items[0]["type"]=="DIAGRAM"
+    row=conn.execute("SELECT * FROM media_assets WHERE document_id=?",(doc_id,)).fetchone()
+    assert row["asset_type"]=="DIAGRAM"
+    assert row["evidence_ids_json"]=="[]"
