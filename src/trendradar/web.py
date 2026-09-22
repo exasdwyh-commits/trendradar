@@ -9,7 +9,7 @@ from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 
 from .content import (
-    create_blank_document, create_image_plan, create_platform_variant,
+    create_blank_document, create_image_plan, create_platform_variant, edit_selection,
     export_variant, get_document, list_documents, list_publish_center,
     mark_variant_published, restore_version, save_document,
 )
@@ -44,6 +44,13 @@ class DocumentSaveBody(BaseModel):
 
 class PlatformVariantBody(BaseModel):
     platform: str
+
+
+class SelectionEditBody(BaseModel):
+    selected_text: str
+    instruction: str
+    before_context: str = ""
+    after_context: str = ""
 
 
 class PublishedBody(BaseModel):
@@ -245,6 +252,23 @@ def create_app(root: str | Path | None = None) -> FastAPI:
     def restore_document(document_id: str, version_number: int):
         try:
             return {"ok":True,"version":restore_version(conn,document_id,version_number)}
+        except Exception as exc:
+            raise HTTPException(400,str(exc)) from exc
+
+    @app.post("/api/documents/{document_id}/edit-selection")
+    def document_edit_selection(document_id: str, body: SelectionEditBody):
+        try:
+            return {
+                "ok":True,
+                **edit_selection(
+                    conn,
+                    document_id,
+                    body.selected_text,
+                    body.instruction,
+                    body.before_context,
+                    body.after_context,
+                ),
+            }
         except Exception as exc:
             raise HTTPException(400,str(exc)) from exc
 
