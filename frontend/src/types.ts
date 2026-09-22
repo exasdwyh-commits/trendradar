@@ -29,6 +29,8 @@ export type Evidence = {
   source_role: 'PRIMARY' | 'VERIFIER' | 'DISCOVERY'
   source_id: string
   published_at?: string
+  relation?: 'SUPPORT' | 'COUNTER' | 'CONTEXT'
+  note?: string
 }
 
 export type ResearchUnit = {
