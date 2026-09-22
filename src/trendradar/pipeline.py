@@ -20,17 +20,18 @@ def sync_sources(conn: sqlite3.Connection, sources: list[Source]) -> None:
         """
         INSERT INTO sources(
           id,name,lane,role,type,url,include_pattern,tier,reliability,business_value,
-          noise,accuracy,max_per_round,enabled,note
+          noise,accuracy,window_days,scan_limit,max_per_round,enabled,note
         )
         VALUES(
           :id,:name,:lane,:role,:type,:url,:include_pattern,:tier,:reliability,:business_value,
-          :noise,:accuracy,:max_per_round,:enabled,:note
+          :noise,:accuracy,:window_days,:scan_limit,:max_per_round,:enabled,:note
         )
         ON CONFLICT(id) DO UPDATE SET
           name=excluded.name,lane=excluded.lane,role=excluded.role,type=excluded.type,
           url=excluded.url,include_pattern=excluded.include_pattern,tier=excluded.tier,
           reliability=excluded.reliability,business_value=excluded.business_value,
-          noise=excluded.noise,accuracy=excluded.accuracy,max_per_round=excluded.max_per_round,
+          noise=excluded.noise,accuracy=excluded.accuracy,window_days=excluded.window_days,
+          scan_limit=excluded.scan_limit,max_per_round=excluded.max_per_round,
           enabled=excluded.enabled,note=excluded.note
         """,
         [{
@@ -38,7 +39,8 @@ def sync_sources(conn: sqlite3.Connection, sources: list[Source]) -> None:
             "url": s.url, "include_pattern": s.include_pattern,
             "tier": s.tier, "reliability": s.reliability,
             "business_value": s.business_value, "noise": s.noise,
-            "accuracy": s.accuracy, "max_per_round": s.max_per_round,
+            "accuracy": s.accuracy, "window_days": s.window_days,
+            "scan_limit": s.scan_limit, "max_per_round": s.max_per_round,
             "enabled": 1 if s.enabled else 0, "note": s.note,
         } for s in sources],
     )
