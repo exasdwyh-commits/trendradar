@@ -4,6 +4,7 @@ from pathlib import Path
 import pytest
 
 import trendradar.content as content
+import trendradar.services.editing as editing_mod
 from trendradar.db import init_db
 
 ROOT=Path(__file__).resolve().parents[1]
@@ -24,9 +25,9 @@ def test_selection_edit_is_pure_transform_and_filters_fake_evidence(monkeypatch)
         "SELECT COUNT(*) n FROM document_versions WHERE document_id=?",(document_id,)
     ).fetchone()["n"]
 
-    monkeypatch.setattr(content,"slot_enabled",lambda name: True)
+    monkeypatch.setattr(editing_mod,"slot_enabled",lambda name: True)
     monkeypatch.setattr(
-        content,
+        editing_mod,
         "chat_json",
         lambda *args,**kwargs: ({
             "replacement":"更紧凑、逻辑更清楚的一段文字。",
