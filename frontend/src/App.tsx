@@ -293,8 +293,23 @@ function BlindEval(){
       </button>
     })}</div>
     {!round.submitted?<div className="blind-submit"><span>已选 {picks.length}/3</span><button className="primary-button" disabled={picks.length!==3||busy} onClick={()=>void submit()}>{busy?'提交中…':'提交后揭晓系统 TOP3'}</button></div>:
-      <div className="world-card"><span>本轮结果</span><p>命中 {round.hits}/3。系统 TOP3：{systemTitles.join('；')}</p><small>盲评只检验选题选择是否接近你的判断，不代表观点本身正确。</small></div>}
+      <>
+        <div className="world-card"><span>本轮结果</span><p>命中 {round.hits}/3。系统 TOP3：{systemTitles.join('；')}</p><small>盲评只检验选题选择是否接近你的判断，不代表观点本身正确。</small></div>
+        <CalibrationPanel data={data.calibration}/>
+      </>}
   </>
+}
+
+function CalibrationPanel({data}:{data:any}){
+  if(!data)return null
+  if((data.rounds||0)<3)return <div className="calibration-card"><span>校准数据积累中</span><p>当前 {data.rounds||0} 轮。至少积累 3 轮后再看系统偏好与人工偏好的稳定差异，避免根据单日结果调参。</p></div>
+  const lanes=(data.lanes||[]).slice(0,5)
+  const disagreements=(data.disagreements||[]).slice(0,6)
+  return <section className="section">
+    <div className="section-title"><h2>校准视图</h2><span>只诊断，不自动改权重</span></div>
+    <div className="calibration-grid">{lanes.map((x:any)=><div className="calibration-lane" key={x.key}><strong>{x.key}</strong><div><span>我选 {x.human}</span><span>系统选 {x.system}</span><span>重合 {x.overlap}</span></div></div>)}</div>
+    {!!disagreements.length&&<div className="calibration-disagreements">{disagreements.map((x:any)=><div key={x.round_date+x.candidate_id+x.type}><Pill tone={x.type==='HUMAN_ONLY'?'blue':'amber'}>{x.type==='HUMAN_ONLY'?'我选·系统漏掉':'系统选·我没选'}</Pill><strong>{x.title}</strong><small>{x.round_date} · {x.lane} · {(x.source_ids||[]).join(' / ')}</small></div>)}</div>}
+  </section>
 }
 
 function Sources(){
