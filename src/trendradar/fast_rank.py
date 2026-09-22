@@ -44,14 +44,22 @@ def refine_candidates(conn: sqlite3.Connection, limit: int = 40) -> dict:
             "evidence": [dict(x) for x in evidence],
         })
 
-    data,model = chat_json(
-        "FAST_MODEL",
-        FAST_RANK_SYSTEM,
-        json.dumps({"candidates":payload},ensure_ascii=False),
-        timeout=90,
-        conn=conn,
-        task="fast_rank",
-    )
+    try:
+        data,model = chat_json(
+            "FAST_MODEL",
+            FAST_RANK_SYSTEM,
+            json.dumps({"candidates":payload},ensure_ascii=False),
+            timeout=90,
+            conn=conn,
+            task="fast_rank",
+        )
+    except Exception as exc:
+        return {
+            "enabled": True,
+            "processed": 0,
+            "error": str(exc)[:500],
+            "degraded": True,
+        }
     allowed={r["id"]:r for r in rows}
     processed=0
     for item in data.get("items",[]):
