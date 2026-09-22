@@ -194,7 +194,10 @@ function Studio({selected,onSelect,refreshKey,bump}:{selected:string|null;onSele
     const restore=async(v:number)=>{await api.post('/api/documents/'+selected+'/restore/'+v);await reload();bump()}
     const imagePlan=async()=>{await api.post('/api/documents/'+selected+'/image-plan');await reload()}
     const variant=async(platform:string)=>{await api.post('/api/documents/'+selected+'/variant',{platform});await reload()}
-    return <Editor document={detail} saving={saving} onSave={save} onRestore={restore} onImagePlan={imagePlan} onVariant={variant}/>
+    const aiEdit=async(payload:{selected_text:string;instruction:string;before_context:string;after_context:string})=>{
+      return api.post<{replacement:string;warning?:string;used_evidence_ids?:string[]}>('/api/documents/'+selected+'/edit-selection',payload)
+    }
+    return <Editor document={detail} saving={saving} onSave={save} onRestore={restore} onImagePlan={imagePlan} onVariant={variant} onAiEdit={aiEdit}/>
   }
   return <>
     <Header eyebrow="CONTENT STUDIO" title="创作中心" sub="从系统选题开始，也可以完全从自己的想法开始。母稿是资产，不是一次性AI输出。"
