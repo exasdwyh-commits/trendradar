@@ -1,5 +1,7 @@
 name: live-smoke
 
+# Runs the real network collector on a clean GitHub runner; no model secrets required.
+
 on:
   workflow_dispatch:
   push:
