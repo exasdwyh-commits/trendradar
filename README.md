@@ -105,7 +105,7 @@ Research 不再只保存一段模型总结。每条 FACT / CLAIM / INFER 都保�
 - FACT / CLAIM / INFER 逐条绑定 intelligence id，可追溯到原始来源
 - 研究包若不足两个独立证据，不能进入 Thesis
 - 选中文字可直接调用 AI 精简、重写、加强逻辑；AI 只能使用文章已绑定证据
-- 配图建议
+- 配图建议：数据图必须绑定真实 evidence id，无来源的数据图会被系统拒绝
 - 多平台版本生成
 
 母稿是长期资产，不是一次性 AI 输出。
@@ -191,6 +191,8 @@ sh scripts/install-macos-launchagent.sh
 - `CRITIC_MODEL`：独立 Challenger
 
 没有配置某个模型时，对应能力明确显示未配置，**不允许规则结果冒充 AI 认知结果**。
+
+模型调用成本也可以被纳入运行纪律：在 `.env` 中配置各槽位的输入/输出单价后，系统会记录每次调用的人民币成本；可选配置 `AI_24H_BUDGET_CNY` 与各槽位 `*_24H_CALL_LIMIT`，对滚动24小时成本和调用次数做软停止，避免自动任务失控消耗额度。
 
 ## 数据资产
 
