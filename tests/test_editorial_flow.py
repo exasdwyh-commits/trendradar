@@ -121,3 +121,16 @@ def test_full_editorial_flow_with_grounding_and_publication_snapshot(monkeypatch
     assert conn.execute(
         "SELECT COUNT(*) n FROM research_item_sources"
     ).fetchone()["n"]==4
+    assert conn.execute(
+        "SELECT COUNT(*) n FROM evidence_links WHERE document_id=?",
+        (document_id,),
+    ).fetchone()["n"]==2
+
+    snapshot = conn.execute(
+        "SELECT snapshot_json FROM content_snapshots WHERE publication_id=?",
+        (publication_id,),
+    ).fetchone()
+    assert snapshot is not None
+    import json
+    payload=json.loads(snapshot["snapshot_json"])
+    assert {item["id"] for item in payload["evidence"]} == {"i1","i2"}
