@@ -5,6 +5,7 @@ import sqlite3
 import uuid
 
 from .content import ensure_document_for_article
+from .grounding import assert_no_new_numeric_claims
 from .llm import chat_json
 from .prompts import CRITIC_SYSTEM, RESEARCH_SYSTEM, THESIS_SYSTEM, WRITER_SYSTEM
 
@@ -255,6 +256,20 @@ def draft_article(conn: sqlite3.Connection, thesis_id: str) -> tuple[str,str]:
         "WRITING_MODEL", WRITER_SYSTEM, json.dumps(payload, ensure_ascii=False),
         conn=conn, task="writer"
     )
+    generated_title = str(data.get("title") or "")
+    generated_body = str(data.get("body") or "")
+    allowed_numeric_texts = [
+        str(material.get("candidate") or {}),
+        json.dumps(research or {},ensure_ascii=False),
+        *(f"{e.get('title','')} {e.get('summary','')} {e.get('content','')}" for e in material.get("evidence",[])),
+        thesis["thesis"],
+    ]
+    assert_no_new_numeric_claims(
+        f"{generated_title}\n{generated_body}",
+        allowed_numeric_texts,
+        context="writer",
+    )
+
     aid = uuid.uuid4().hex
     conn.execute(
         """
@@ -263,9 +278,9 @@ def draft_article(conn: sqlite3.Connection, thesis_id: str) -> tuple[str,str]:
         """,
         (
             aid,thesis["candidate_id"],thesis_id,
-            data.get("title",""),
+            generated_title,
             json.dumps(data.get("outline",[]),ensure_ascii=False),
-            data.get("body",""),
+            generated_body,
             model,
         ),
     )
