@@ -59,7 +59,43 @@ Source Registry
 ### 8. Platform Variants / Publications
 母稿适配公众号、小红书、知乎、头条等平台；发布状态、URL 与后续指标独立记录。
 
-## 三、趋势身份
+## 三、质量与评估层
+
+### Source Quality
+来源不是平权列表。每个来源具有：
+
+- tier
+- reliability
+- business_value
+- noise
+- accuracy
+- max_per_round
+
+T1/T2 是核心事实与验证源；T3 是行业补充；T4 Discovery 只负责发现线索，不允许独立支撑高置信结论。
+
+### Candidate Run
+每个日轮次在模型筛选后冻结候选状态，同时保存 content_rank 与 cognition_rank。历史评估读取 frozen run，而不是读取今天已经被重新计算过的 candidate。
+
+### Blind 10→3
+盲评界面只显示题目和事件摘要。人工先选 3 条，提交以后才揭晓系统 TOP3。14 天窗口的命中率用于判断“选题系统有没有更接近人”，不用于证明观点真假。
+
+### AI Gateway
+模型调用统一经过 Gateway：
+
+- OpenAI-compatible slots
+- 429 / 5xx / transport retry
+- Retry-After
+- attempts / retries
+- input / output tokens
+- duration / HTTP status
+- failure telemetry
+
+日任务中的 FAST、COGNITION、World Model 允许降级；交互式 Research / Writer / Critic 失败则明确返回错误，不伪造结果。
+
+### Publication Snapshot
+AI生成内容必须通过 Challenger 才能标记发布；自主空白稿保持用户控制权。发布时冻结当时的 Document、Thesis、Research、Evidence、Variant 与 Publication。
+
+## 四、趋势身份
 
 模型每次不能自由发明趋势名。
 
@@ -69,7 +105,7 @@ Source Registry
 
 新趋势要求至少两个独立事件，且最好来自不同主体；否则保留 DRAFT。
 
-## 四、模型槽位
+## 五、模型槽位
 
 业务代码永远只认槽位，不硬编码模型名。
 
@@ -77,7 +113,7 @@ FAST / COGNITION / RESEARCH / WRITING / CRITIC。
 
 认知失败时不允许规则引擎伪装成认知结果。
 
-## 五、定时
+## 六、定时
 
 目标固定为 Asia/Shanghai 13:00 每日主轮次。
 
@@ -86,7 +122,7 @@ FAST / COGNITION / RESEARCH / WRITING / CRITIC。
 - 补跑一次
 - 不按照“每 20 小时”漂移
 
-## 六、前台
+## 七、前台
 
 默认首页只显示 3 条。
 
