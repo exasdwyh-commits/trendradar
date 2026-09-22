@@ -9,6 +9,11 @@ STOP = {
     "this","that","will","new","says","after","as","its","it","be","has","have",
 }
 
+ENTITY_STOP = {
+    "the","new","ai","ceo","cfo","cto","us","uk","eu","q1","q2","q3","q4",
+    "company","companies","startup","startups","report","reports",
+}
+
 
 def _normalize_title(value: str) -> str:
     return re.sub(r"[^a-z0-9\u4e00-\u9fff]+", "", (value or "").lower())
@@ -46,6 +51,25 @@ def similarity(a: str, b: str) -> float:
     return max(token_score, bigram_score)
 
 
+def named_tokens(title: str) -> set[str]:
+    """
+    Lightweight entity anchors for deterministic event clustering.
+
+    We intentionally avoid a full NER dependency here. Capitalized/brand-like
+    tokens, tickers and numbers are enough to provide a strong same-event anchor
+    without making broad industry vocabulary collapse unrelated stories.
+    """
+    raw = re.findall(r"\b[A-Za-z][A-Za-z0-9.&-]{2,}\b|\b\d+(?:\.\d+)?\b", title or "")
+    result = set()
+    for token in raw:
+        normalized = token.lower().strip(".&-")
+        if not normalized or normalized in ENTITY_STOP or normalized in STOP:
+            continue
+        if token[0].isupper() or any(ch.isdigit() for ch in token) or token.isupper():
+            result.add(normalized)
+    return result
+
+
 def body_terms(text: str) -> set[str]:
     text = (text or "").lower()
     terms = set(re.findall(r"[a-z][a-z0-9-]{3,}", text))
@@ -70,8 +94,16 @@ def same_event_score(title_a: str, body_a: str, title_b: str, body_b: str) -> fl
     if title_score >= 0.34:
         return max(title_score, title_score * 0.65 + body_score * 0.35)
 
-    # Body-only merges require some title affinity to avoid collapsing broad
-    # industry articles that reuse the same vocabulary.
+    # Shared company/product/number anchors let differently-worded headlines
+    # merge when their bodies describe the same event. Generic industry terms
+    # alone do not trigger this branch.
+    shared_entities = named_tokens(title_a) & named_tokens(title_b)
+    if shared_entities and body_score >= 0.22:
+        anchored = 0.34 + min(0.28, body_score * 0.45) + min(0.10, title_score * 0.35)
+        return max(title_score, anchored)
+
+    # Body-only merges still require meaningful title affinity to avoid
+    # collapsing broad industry articles that reuse the same vocabulary.
     if title_score >= 0.20 and body_score >= 0.55:
         return title_score * 0.35 + body_score * 0.65
     return title_score
