@@ -484,18 +484,21 @@ sources:
 
   # ===== 中国商业映射 =====
   - id: china-nbs
-    name: 国家统计局
+    name: 国家统计局 · 数据发布
     lane: INDUSTRY
     role: PRIMARY
     type: html
     url: https://www.stats.gov.cn/sj/zxfb/
-    include: "/sj/zxfb/"
+    include: "/sj/zxfb/\\d{6}/t\\d{8}_\\d+\\.html"
     tier: 1
-    reliability: 94
+    reliability: 95
     business_value: 78
-    noise: 10
-    accuracy: 94
-    max_per_round: 10
+    noise: 8
+    accuracy: 95
+    window_days: 30
+    scan_limit: 40
+    max_per_round: 15
+    note: "中国经济判断的数据底座；采用 intel-workbench 实测的列表路径规则。"
 
   - id: china-customs
     name: 海关总署
@@ -533,14 +536,51 @@ sources:
     role: PRIMARY
     type: html
     url: https://www.miit.gov.cn/
+    include: "/xwfb/[a-z]+/art/\\d{4}/art_[0-9a-f]+\\.html"
     tier: 1
     reliability: 92
+    business_value: 84
+    noise: 12
+    accuracy: 92
+    window_days: 14
+    scan_limit: 30
+    max_per_round: 10
+    note: "制造业与AI产业政策的一手证据；列表标题支持 title 属性兜底。"
+
+
+  - id: china-pboc
+    name: 中国人民银行
+    lane: GLOBALIZATION
+    role: PRIMARY
+    type: html
+    url: https://www.pbc.gov.cn/
+    include: "/goutongjiaoliu/\\d+/\\d+/\\d+/index\\.html"
+    tier: 1
+    reliability: 94
     business_value: 80
     noise: 14
-    accuracy: 92
-    max_per_round: 8
-    enabled: false
-    note: "后续做专用 adapter。"
+    accuracy: 94
+    window_days: 14
+    scan_limit: 30
+    max_per_round: 10
+    note: "货币政策、金融统计、跨境与支付的一手来源；不把“央行”本身当主题词。"
+
+  - id: caixin
+    name: 财新网
+    lane: COMPANY
+    role: VERIFIER
+    type: html
+    url: https://www.caixin.com/
+    include: "/\\d{4}-\\d{2}-\\d{2}/\\d+\\.html"
+    tier: 2
+    reliability: 88
+    business_value: 84
+    noise: 18
+    accuracy: 88
+    window_days: 7
+    scan_limit: 35
+    max_per_round: 10
+    note: "中文财经深度验证源；采集器允许 caixin.com 同根子域链接。"
 
   # ===== 独立商业 / 产品分析 =====
   - id: stratechery
