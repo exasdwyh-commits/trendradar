@@ -31,6 +31,26 @@ export type Evidence = {
   published_at?: string
 }
 
+export type ResearchUnit = {
+  text: string
+  evidence_ids: string[]
+  note?: string
+}
+
+export type ResearchPack = {
+  id: string
+  facts: ResearchUnit[]
+  claims: ResearchUnit[]
+  inferences: ResearchUnit[]
+  strongest_counter?: string
+  evidence_gap?: string
+  grounding?: {
+    grounded_units: number
+    evidence_ids: string[]
+    evidence_count: number
+  }
+}
+
 export type Thesis = {
   id: string
   candidate_id: string
