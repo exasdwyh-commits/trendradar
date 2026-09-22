@@ -363,6 +363,7 @@ def create_app(root: str | Path | None = None) -> FastAPI:
             return {
                 "round": submit_blind_round(conn, round_id, body.picks),
                 "summary": evaluation_summary(conn),
+                "calibration": calibration_summary(conn),
             }
         except Exception as exc:
             raise HTTPException(400, str(exc)) from exc
