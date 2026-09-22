@@ -8,7 +8,7 @@ import uvicorn
 
 from .brief import write_daily_brief
 from .config import enabled_sources, load_sources, load_yaml
-from .db import connect, init_db
+from .db import connect, init_db, schema_version
 from .exporter import export_markdown, export_wechat_html
 from .pipeline import run_daily, sync_sources, today
 from .scheduler import daemon
@@ -81,6 +81,7 @@ def main() -> None:
         counts = {}
         for table in ["sources","intelligence","story_clusters","candidates","trends","research","theses","articles"]:
             counts[table] = conn.execute(f"SELECT COUNT(*) AS n FROM {table}").fetchone()["n"]
+        counts["schema_version"] = schema_version(conn)
         counts["today"] = today(conn, 3)
         print(json.dumps(counts, ensure_ascii=False, indent=2))
         return
