@@ -354,16 +354,28 @@ def evaluation_summary(conn: sqlite3.Connection, recent: int = 14) -> dict:
 def calibration_summary(conn: sqlite3.Connection, recent: int = 14) -> dict:
     rounds = conn.execute(
         """
-        SELECT * FROM blind_rounds
-        WHERE submitted_at IS NOT NULL
-        ORDER BY round_date DESC
+        SELECT br.*,cr.settings_json
+        FROM blind_rounds br
+        LEFT JOIN candidate_runs cr ON cr.id=br.candidate_run_id
+        WHERE br.submitted_at IS NOT NULL
+        ORDER BY br.round_date DESC
         LIMIT ?
         """,
         (max(1,recent),),
     ).fetchall()
-    lane_stats: dict[str, dict] = {}
-    source_stats: dict[str, dict] = {}
-    disagreements: list[dict] = []
+
+    buckets: dict[str, dict] = {}
+
+    def mode_bucket(mode: str) -> dict:
+        return buckets.setdefault(
+            mode,
+            {
+                "rounds":0,
+                "lanes":{},
+                "sources":{},
+                "disagreements":[],
+            },
+        )
 
     def bump(bucket: dict[str, dict], key: str, human: bool, system: bool) -> None:
         item = bucket.setdefault(
@@ -382,6 +394,14 @@ def calibration_summary(conn: sqlite3.Connection, recent: int = 14) -> dict:
             item["system_only"] += 1
 
     for round_row in rounds:
+        try:
+            settings=json.loads(round_row["settings_json"] or "{}")
+        except json.JSONDecodeError:
+            settings={}
+        mode=settings.get("ranking_mode","RULE")
+        bucket=mode_bucket(mode)
+        bucket["rounds"]+=1
+
         human = set(json.loads(round_row["human_picks_json"] or "[]"))
         system = set(json.loads(round_row["system_top3_json"] or "[]"))
         snapshots = conn.execute(
@@ -404,13 +424,14 @@ def calibration_summary(conn: sqlite3.Connection, recent: int = 14) -> dict:
             })
             in_human = candidate_id in human
             in_system = candidate_id in system
-            bump(lane_stats,lane,in_human,in_system)
+            bump(bucket["lanes"],lane,in_human,in_system)
             for source_id in source_ids:
-                bump(source_stats,source_id,in_human,in_system)
+                bump(bucket["sources"],source_id,in_human,in_system)
 
-            if in_human != in_system and len(disagreements) < 12:
-                disagreements.append({
+            if in_human != in_system and len(bucket["disagreements"]) < 12:
+                bucket["disagreements"].append({
                     "round_date":round_row["round_date"],
+                    "ranking_mode":mode,
                     "type":"HUMAN_ONLY" if in_human else "SYSTEM_ONLY",
                     "candidate_id":candidate_id,
                     "title":candidate.get("title",""),
@@ -420,18 +441,23 @@ def calibration_summary(conn: sqlite3.Connection, recent: int = 14) -> dict:
                     "cognition_score":candidate.get("cognition_score"),
                 })
 
-    lanes = sorted(
-        lane_stats.values(),
-        key=lambda x: (-(x["human"]+x["system"]),x["key"]),
-    )
-    sources = sorted(
-        source_stats.values(),
-        key=lambda x: (-(x["human"]+x["system"]),x["key"]),
-    )[:15]
+    normalized={}
+    for mode,bucket in buckets.items():
+        normalized[mode]={
+            "rounds":bucket["rounds"],
+            "lanes":sorted(
+                bucket["lanes"].values(),
+                key=lambda x: (-(x["human"]+x["system"]),x["key"]),
+            ),
+            "sources":sorted(
+                bucket["sources"].values(),
+                key=lambda x: (-(x["human"]+x["system"]),x["key"]),
+            )[:15],
+            "disagreements":bucket["disagreements"],
+        }
+
     return {
         "rounds":len(rounds),
-        "lanes":lanes,
-        "sources":sources,
-        "disagreements":disagreements,
+        "by_mode":normalized,
         "diagnostic_only":True,
     }
