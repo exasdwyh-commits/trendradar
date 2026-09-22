@@ -48,14 +48,22 @@ def analyze_pending(conn: sqlite3.Connection, limit: int = 12) -> dict:
         return {"enabled": True, "processed": 0}
 
     payload = _candidate_payload(conn, rows)
-    data, model = chat_json(
-        "COGNITION_MODEL",
-        BUSINESS_COGNITION_SYSTEM,
-        json.dumps(payload, ensure_ascii=False),
-        timeout=120,
-        conn=conn,
-        task="cognition",
-    )
+    try:
+        data, model = chat_json(
+            "COGNITION_MODEL",
+            BUSINESS_COGNITION_SYSTEM,
+            json.dumps(payload, ensure_ascii=False),
+            timeout=120,
+            conn=conn,
+            task="cognition",
+        )
+    except Exception as exc:
+        return {
+            "enabled": True,
+            "processed": 0,
+            "error": str(exc)[:500],
+            "degraded": True,
+        }
     by_id = {r["id"]: r for r in rows}
     processed = 0
     errors: list[str] = []
