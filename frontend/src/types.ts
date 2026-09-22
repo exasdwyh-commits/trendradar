@@ -82,6 +82,8 @@ export type MediaAsset = {
   placement?: string
   prompt?: string
   aspect_ratio?: string
+  evidence_ids?: string[]
+  source_url?: string
   status: string
 }
 
