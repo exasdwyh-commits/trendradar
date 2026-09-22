@@ -40,6 +40,7 @@ def migrate(conn: sqlite3.Connection) -> None:
     _ensure_column(conn, "sources", "scan_limit", "INTEGER")
     _ensure_column(conn, "sources", "max_per_round", "INTEGER")
     _ensure_column(conn, "blind_rounds", "candidate_run_id", "TEXT REFERENCES candidate_runs(id) ON DELETE SET NULL")
+    _ensure_column(conn, "media_assets", "evidence_ids_json", "TEXT NOT NULL DEFAULT '[]'")
     conn.commit()
 
 
