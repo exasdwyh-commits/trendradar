@@ -7,6 +7,7 @@ import sqlite3
 import uuid
 from pathlib import Path
 
+from .grounding import assert_no_new_numeric_claims
 from .llm import chat_json, slot_enabled
 from .snapshot import freeze_publication_snapshot
 
@@ -373,6 +374,15 @@ def edit_selection(
     replacement = str(data.get("replacement") or "").strip()
     if not replacement:
         raise ValueError("model returned empty replacement")
+    assert_no_new_numeric_claims(
+        replacement,
+        [
+            selected_text,before_context,after_context,
+            str(doc.get("thesis") or ""),
+            *(f"{e.get('title','')} {e.get('summary','')}" for e in evidence),
+        ],
+        context="selection edit",
+    )
     allowed = {item["id"] for item in evidence}
     used = data.get("used_evidence_ids") or []
     if isinstance(used,str):
@@ -437,6 +447,15 @@ def create_image_plan(conn: sqlite3.Connection, document_id: str) -> list[dict]:
         # A data chart without traceable data is worse than no chart.
         if asset_type=="DATA_CHART" and not evidence_ids:
             continue
+        assert_no_new_numeric_claims(
+            f"{item.get('title','')} {item.get('brief','')} {item.get('prompt','')}",
+            [
+                doc["current"].get("plain_text",""),
+                str(doc.get("thesis") or ""),
+                *(f"{e.get('title','')} {e.get('summary','')}" for e in evidence),
+            ],
+            context="image plan",
+        )
 
         source_url=None
         if evidence_ids and asset_type in {"DATA_CHART","PHOTO","SCREENSHOT"}:
@@ -487,7 +506,17 @@ def create_platform_variant(conn: sqlite3.Connection, document_id: str, platform
         conn=conn, task=f"platform_variant:{platform.lower()}"
     )
     vid=uuid.uuid4().hex
-    text=data.get("content_text","")
+    text=str(data.get("content_text") or "")
+    generated_title=str(data.get("title") or doc["title"])
+    assert_no_new_numeric_claims(
+        f"{generated_title}\n{text}",
+        [
+            doc["title"],doc["current"].get("plain_text",""),
+            str(doc.get("thesis") or ""),
+            *(f"{e.get('title','')} {e.get('summary','')}" for e in (doc.get("evidence") or [])),
+        ],
+        context=f"platform variant {platform}",
+    )
     html_content=data.get("content_html") or _plain_to_html(text)
     conn.execute(
         """
@@ -496,7 +525,7 @@ def create_platform_variant(conn: sqlite3.Connection, document_id: str, platform
         ) VALUES(?,?,?,?,?,?,?,'READY',?)
         """,
         (
-            vid,document_id,platform,data.get("title") or doc["title"],text,html_content,
+            vid,document_id,platform,generated_title,text,html_content,
             json.dumps(data.get("metadata",{}),ensure_ascii=False),model,
         ),
     )
