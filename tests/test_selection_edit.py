@@ -51,6 +51,6 @@ def test_selection_edit_is_pure_transform_and_filters_fake_evidence(monkeypatch)
 def test_selection_edit_requires_real_selection(monkeypatch):
     conn=db()
     document_id=content.create_blank_document(conn,"自主文章")
-    monkeypatch.setattr(content,"slot_enabled",lambda name: True)
+    monkeypatch.setattr(editing_mod,"slot_enabled",lambda name: True)
     with pytest.raises(ValueError,match="selected_text"):
         content.edit_selection(conn,document_id,"","精简")
