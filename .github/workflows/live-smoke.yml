@@ -65,6 +65,20 @@ jobs:
               """
           ).fetchone()
 
+          bad_write = conn.execute(
+              """
+              SELECT c.id,c.title,COUNT(DISTINCT i.source_id) source_count,
+                SUM(CASE WHEN i.source_role IN ('PRIMARY','VERIFIER') THEN 1 ELSE 0 END) quality_count
+              FROM candidates c
+              JOIN cluster_items ci ON ci.cluster_id=c.cluster_id
+              JOIN intelligence i ON i.id=ci.intelligence_id
+              WHERE c.action='WRITE'
+              GROUP BY c.id
+              HAVING COUNT(DISTINCT i.source_id) < 2 OR quality_count = 0
+              """
+          ).fetchall()
+          assert not bad_write, [dict(x) for x in bad_write]
+
           counts = {}
           for table in ("sources","intelligence","story_clusters","candidates","candidate_runs","blind_rounds"):
               counts[table] = conn.execute(f"SELECT COUNT(*) FROM {table}").fetchone()[0]
@@ -74,6 +88,10 @@ jobs:
               "collection": collection,
               "source_health": dict(source_health),
               "counts": counts,
+              "cluster_compression": round(
+                  1 - counts["story_clusters"] / counts["intelligence"], 4
+              ) if counts["intelligence"] else 0,
+              "corroboration_gate": "PASS",
               "fast_rank": stats.get("fast_rank"),
               "cognition": stats.get("cognition"),
               "world_model": stats.get("world_model"),
