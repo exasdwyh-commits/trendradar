@@ -269,7 +269,12 @@ def collect_html(
 ) -> list[Item]:
     response = client.get(source.url, follow_redirects=True)
     response.raise_for_status()
-    links = _discover_links(source, response.text, limit)
+    discovery_limit = source.scan_limit or max(limit, enrich_limit)
+    links = _discover_links(source, response.text, discovery_limit)
+    cutoff = (
+        datetime.now(timezone.utc) - timedelta(days=source.window_days)
+        if source.window_days else None
+    )
     items: list[Item] = []
     for index,(fallback_title,url) in enumerate(links):
         title,summary,content,published = fallback_title,"","",None
@@ -281,7 +286,13 @@ def collect_html(
             except Exception:
                 pass
         published = published or parse_url_date(url)
+        if cutoff is not None and published is not None:
+            normalized = published if published.tzinfo else published.replace(tzinfo=timezone.utc)
+            if normalized < cutoff:
+                continue
         items.append(make_item(source,title,url,summary,published,content))
+        if len(items) >= limit:
+            break
     return items
 
 
