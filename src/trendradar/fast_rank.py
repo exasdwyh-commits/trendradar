@@ -36,12 +36,15 @@ def refine_candidates(conn: sqlite3.Connection, limit: int = 40) -> dict:
             """,
             (row["cluster_id"],),
         ).fetchall()
+        evidence_rows = [dict(x) for x in evidence]
         payload.append({
             "candidate_id": row["id"],
             "title": row["title"],
             "rule_content_score": row["content_score"],
             "rule_cognition_score": row["cognition_score"],
-            "evidence": [dict(x) for x in evidence],
+            "source_count": len({x["source_id"] for x in evidence_rows}),
+            "source_roles": sorted({x["source_role"] for x in evidence_rows}),
+            "evidence": evidence_rows,
         })
 
     try:
@@ -73,14 +76,29 @@ def refine_candidates(conn: sqlite3.Connection, limit: int = 40) -> dict:
         except (TypeError,ValueError):
             continue
         old=allowed[cid]
+        evidence_rows = conn.execute(
+            """
+            SELECT DISTINCT i.source_id,i.source_role
+            FROM cluster_items ci
+            JOIN intelligence i ON i.id=ci.intelligence_id
+            WHERE ci.cluster_id=?
+            """,
+            (old["cluster_id"],),
+        ).fetchall()
+        source_count = len({x["source_id"] for x in evidence_rows})
+        non_discovery = any(x["source_role"] in {"PRIMARY","VERIFIER"} for x in evidence_rows)
+        corroborated = source_count >= 2 and non_discovery
         new_cognition=round(old["cognition_score"]*.35+cognition*.65,2)
         new_content=round(old["content_score"]*.35+content*.65,2)
         keep=bool(item.get("keep",True)) and relevance>=45
         if not keep:
             action="SKIP"
             status="SKIPPED"
-        elif new_content>=72:
+        elif new_content>=72 and corroborated:
             action="WRITE"
+            status="PENDING"
+        elif new_content>=72:
+            action="TRACK"
             status="PENDING"
         elif new_content>=52 or new_cognition>=60:
             action="TRACK"
