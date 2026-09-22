@@ -13,6 +13,16 @@ COMMERCIAL_TERMS = {
     "chip", "energy", "export", "tariff", "出海", "营收", "利润", "毛利", "客户",
     "合同", "订单", "工厂", "供应链", "商业模式", "定价", "并购", "融资", "上市",
     "机器人", "自动化", "算力", "芯片", "能源", "出口", "授权", "复购",
+    "制造业", "工业增加值", "工业企业利润", "社会消费品零售", "固定资产投资",
+    "采购经理指数", "居民消费价格", "生产者出厂价格", "产业政策", "新型工业化",
+    "先进制造", "专精特新", "国产替代", "货币政策", "金融统计", "跨境", "支付",
+    "新能源", "储能", "光伏", "电池", "汽车", "物流", "航运", "零售", "电商",
+}
+
+NOISE_TERMS = {
+    "horoscope","celebrity","sports","weather","recipe","movie review","box office",
+    "election poll","campaign rally","tv show","streaming show","royal family",
+    "星座","明星","体育","天气","菜谱","影视","综艺","选举民调",
 }
 
 
@@ -76,6 +86,9 @@ def commercial_score(
         r"\d+(?:\.\d+)?\s*(?:%|billion|million|亿|万|美元|元)", text
     ) else 0
     raw = 28.0 + hits * 9.0 + numeric * 12.0
+    noise_hits = sum(1 for term in NOISE_TERMS if term in text)
+    if noise_hits and hits == 0:
+        raw -= min(45.0, noise_hits * 30.0)
     if source_business_value is not None:
         # Source business density is a prior, not the conclusion.
         raw = raw * 0.82 + float(source_business_value) * 0.18
