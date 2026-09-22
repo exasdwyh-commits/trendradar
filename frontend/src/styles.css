@@ -80,3 +80,8 @@
 .relation-support{background:#eaf6f0;color:#187454}.relation-counter{background:#fff0ee;color:#a7473f}.relation-context{background:#f0f1ef;color:#68717e}
 
 .tool-mini{font-size:9px;color:#7d8794;margin-left:2px}
+
+.calibration-card{margin-top:14px;background:#fff;border:1px dashed #d9d9d2;border-radius:12px;padding:15px}.calibration-card span{font-size:11px;color:#8d949d}.calibration-card p{margin:7px 0 0;color:#69727f;font-size:12px;line-height:1.65}
+.calibration-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}.calibration-lane{background:#fff;border:1px solid var(--line);border-radius:10px;padding:12px}.calibration-lane strong{font-size:12px}.calibration-lane>div{display:flex;gap:8px;flex-wrap:wrap;margin-top:8px;color:#8c939c;font-size:10px}
+.calibration-disagreements{display:grid;gap:7px;margin-top:10px}.calibration-disagreements>div{background:#fff;border:1px solid var(--line);border-radius:10px;padding:11px 13px}.calibration-disagreements strong{display:block;font-size:12px;margin:7px 0 4px}.calibration-disagreements small{color:#9aa0a8;font-size:10px}
+@media(max-width:980px){.calibration-grid{grid-template-columns:1fr}}
