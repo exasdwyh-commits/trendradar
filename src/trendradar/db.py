@@ -3,6 +3,8 @@ from __future__ import annotations
 import sqlite3
 from pathlib import Path
 
+CURRENT_SCHEMA_VERSION = 5
+
 
 def connect(path: str | Path) -> sqlite3.Connection:
     p = Path(path)
@@ -41,6 +43,7 @@ def migrate(conn: sqlite3.Connection) -> None:
     _ensure_column(conn, "sources", "max_per_round", "INTEGER")
     _ensure_column(conn, "blind_rounds", "candidate_run_id", "TEXT REFERENCES candidate_runs(id) ON DELETE SET NULL")
     _ensure_column(conn, "media_assets", "evidence_ids_json", "TEXT NOT NULL DEFAULT '[]'")
+    conn.execute(f"PRAGMA user_version={CURRENT_SCHEMA_VERSION}")
     conn.commit()
 
 
@@ -48,3 +51,8 @@ def init_db(conn: sqlite3.Connection, schema_path: str | Path) -> None:
     conn.executescript(Path(schema_path).read_text(encoding="utf-8"))
     migrate(conn)
     conn.commit()
+
+
+
+def schema_version(conn: sqlite3.Connection) -> int:
+    return int(conn.execute("PRAGMA user_version").fetchone()[0])
