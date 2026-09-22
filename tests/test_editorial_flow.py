@@ -2,6 +2,7 @@ import sqlite3
 from pathlib import Path
 
 import trendradar.content as content
+import trendradar.services.publishing as publishing_mod
 import trendradar.writing as writing
 from trendradar.db import init_db
 
@@ -95,9 +96,9 @@ def test_full_editorial_flow_with_grounding_and_publication_snapshot(monkeypatch
     assert ledger_id and review_id
     assert conn.execute("SELECT status FROM articles WHERE id=?",(article_id,)).fetchone()["status"]=="READY"
 
-    monkeypatch.setattr(content,"slot_enabled",lambda name: True)
+    monkeypatch.setattr(publishing_mod,"slot_enabled",lambda name: True)
     monkeypatch.setattr(
-        content,
+        publishing_mod,
         "chat_json",
         lambda *args,**kwargs: ({
             "title":"AI企业采购正在从聊天框走向工作流",
