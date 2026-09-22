@@ -65,6 +65,33 @@ def parse_datetime(value: str | None) -> datetime | None:
             return None
 
 
+def parse_url_date(url: str) -> datetime | None:
+    path = urlsplit(url).path
+    patterns = [
+        r"/(20\d{2})[-/](\d{2})[-/](\d{2})/",
+        r"/(20\d{2})(\d{2})/t(20\d{2})(\d{2})(\d{2})_",
+        r"/(20\d{2})(\d{2})(\d{2})\d{6,}/",
+    ]
+    for index, pattern in enumerate(patterns):
+        match = re.search(pattern, path)
+        if not match:
+            continue
+        try:
+            if index == 1:
+                year,month,day = int(match.group(3)),int(match.group(4)),int(match.group(5))
+            else:
+                year,month,day = int(match.group(1)),int(match.group(2)),int(match.group(3))
+            return datetime(year,month,day,tzinfo=timezone.utc)
+        except ValueError:
+            continue
+    return None
+
+
+def _root_domain(host: str) -> str:
+    parts = (host or "").lower().split(".")
+    return ".".join(parts[-2:]) if len(parts) >= 2 else host.lower()
+
+
 def make_item(
     source: Source,
     title: str,
@@ -74,6 +101,7 @@ def make_item(
     content: str = "",
 ) -> Item:
     canonical = canonicalize_url(url)
+    published_at = published_at or parse_url_date(url)
     item_id = hashlib.sha256(f"{source.id}|{canonical}".encode()).hexdigest()[:24]
     body_present = bool(normalize_title(content) or normalize_title(summary))
     return Item(
@@ -208,15 +236,18 @@ def _discover_links(source: Source, html_text: str, limit: int) -> list[tuple[st
     soup = BeautifulSoup(html_text, "html.parser")
     pattern = re.compile(source.include_pattern) if source.include_pattern else None
     base_host = urlsplit(source.url).netloc
+    base_root = _root_domain(base_host)
     seen: set[str] = set()
     result: list[tuple[str,str]] = []
     for anchor in soup.find_all("a", href=True):
-        title = normalize_title(anchor.get_text(" ", strip=True))
-        if len(title) < 18:
+        text_title = normalize_title(anchor.get_text(" ", strip=True))
+        attr_title = normalize_title(str(anchor.get("title") or ""))
+        title = attr_title if len(attr_title) >= len(text_title) else text_title
+        if len(title) < 12:
             continue
         url = urljoin(source.url, anchor["href"])
         parts = urlsplit(url)
-        if parts.netloc != base_host:
+        if _root_domain(parts.netloc) != base_root:
             continue
         if pattern and not pattern.search(parts.path):
             continue
@@ -249,6 +280,7 @@ def collect_html(
                 title,summary,content,published = extract_article(page.text, fallback_title)
             except Exception:
                 pass
+        published = published or parse_url_date(url)
         items.append(make_item(source,title,url,summary,published,content))
     return items
 
