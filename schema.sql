@@ -14,6 +14,8 @@ CREATE TABLE IF NOT EXISTS sources (
   business_value INTEGER NOT NULL DEFAULT 65,
   noise INTEGER NOT NULL DEFAULT 30,
   accuracy INTEGER NOT NULL DEFAULT 70,
+  window_days INTEGER,
+  scan_limit INTEGER,
   max_per_round INTEGER,
   enabled INTEGER NOT NULL DEFAULT 1,
   note TEXT,
