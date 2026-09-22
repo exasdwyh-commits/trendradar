@@ -1,8 +1,14 @@
 # 架构基线
 
-## 一、删除掉什么
+## 一、单一主线原则
 
-3.0 不再保留旧版这些产品假设：
+TrendRadar 3.1 是唯一产品基线。仓库不承担旧版兼容、历史 UI 回退或旧功能保留义务。
+
+任何模块是否保留，只看它是否直接服务以下闭环：
+
+高质量商业信号 → 认知与趋势 → Research / Thesis → 人机共创 → 多平台发布 → 判断复盘
+
+以下历史产品假设明确不再保留：
 
 - 国内热搜聚合
 - 关键词热度榜
@@ -14,14 +20,17 @@
 
 仓库只服务一个人：商业内容创作者。
 
-## 二、五层数据流
+## 二、核心数据流
 
 ```
 Source Registry
 → Intelligence
 → Story Cluster
 → Candidate
-→ Cognition / Writing
+→ Cognition / Trend
+→ Research / Thesis
+→ Document / Versions / Evidence
+→ Platform Variants / Publications
 ```
 
 ### 1. Source Registry
@@ -38,8 +47,17 @@ Source Registry
 - cognition_score：值不值得进入长期世界模型
 - content_score：值不值得写公众号
 
-### 5. Cognition / Writing
-认知线更新趋势；内容线才进入研究和写作。
+### 5. Cognition / Trend
+认知线负责更新趋势、支持证据、反证、revision 和 world model。
+
+### 6. Research / Thesis
+内容线进入研究包与核心观点确认。未经人工确认的 Thesis 不进入正式创作。
+
+### 7. Document / Versions / Evidence
+母稿是长期资产，保存结构化内容、HTML、纯文本、版本历史与证据关系。
+
+### 8. Platform Variants / Publications
+母稿适配公众号、小红书、知乎、头条等平台；发布状态、URL 与后续指标独立记录。
 
 ## 三、趋势身份
 
