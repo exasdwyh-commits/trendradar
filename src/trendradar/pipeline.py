@@ -268,10 +268,15 @@ def run_daily(
     limit: int = 18,
     enrich_limit: int = 6,
     output_dir: str | Path = "output/daily",
+    fast_limit: int = 40,
+    cognition_limit: int = 12,
+    candidate_snapshot_limit: int = 20,
+    lookback_hours: int = 72,
 ) -> dict:
     from .brief import write_daily_brief
     from .cognition import analyze_pending
     from .fast_rank import refine_candidates
+    from .evaluation import ensure_blind_round, freeze_candidate_run
     from .trends import world_model_update
 
     run_id = uuid.uuid4().hex
@@ -285,8 +290,15 @@ def run_daily(
         collection = collect_all(conn, sources, timeout=timeout, limit=limit, enrich_limit=enrich_limit)
         new_clusters = cluster_unassigned(conn)
         candidate_count = upsert_candidates(conn)
-        fast_rank = refine_candidates(conn)
-        cognition = analyze_pending(conn)
+        fast_rank = refine_candidates(conn, limit=fast_limit)
+        cognition = analyze_pending(conn, limit=cognition_limit)
+        candidate_run_id = freeze_candidate_run(
+            conn,
+            run_id,
+            lookback_hours=lookback_hours,
+            max_items=candidate_snapshot_limit,
+        )
+        blind_round_id = ensure_blind_round(conn, candidate_run_id)
         world_model = world_model_update(conn)
         brief_path = write_daily_brief(conn, output_dir)
         stats = {
@@ -295,6 +307,8 @@ def run_daily(
             "candidates_touched": candidate_count,
             "fast_rank": fast_rank,
             "cognition": cognition,
+            "candidate_run_id": candidate_run_id,
+            "blind_round_id": blind_round_id,
             "world_model": world_model,
             "daily_brief": str(brief_path),
         }
