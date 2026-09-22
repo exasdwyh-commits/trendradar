@@ -88,8 +88,19 @@ def make_item(
         source_role=source.role,
         lane=source.lane,
         freshness_score=freshness_score(published_at),
-        evidence_score=evidence_score(source.role, body_present, bool(published_at)),
-        commercial_score=commercial_score(title, f"{summary} {content[:1800]}"),
+        evidence_score=evidence_score(
+            source.role,
+            body_present,
+            bool(published_at),
+            reliability=source.reliability,
+            noise=source.noise,
+            accuracy=source.accuracy,
+        ),
+        commercial_score=commercial_score(
+            title,
+            f"{summary} {content[:1800]}",
+            source_business_value=source.business_value,
+        ),
         title_hash=title_hash(title),
     )
 
