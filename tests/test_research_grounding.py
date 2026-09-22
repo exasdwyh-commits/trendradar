@@ -160,3 +160,43 @@ def test_grounded_research_allows_thesis_generation(monkeypatch):
     tid = writing.propose_thesis(conn,"c")
     row = conn.execute("SELECT * FROM theses WHERE id=?",(tid,)).fetchone()
     assert row["status"] == "PENDING"
+
+
+
+def test_two_evidence_items_from_same_source_do_not_unlock_thesis(monkeypatch):
+    conn = db()
+    conn.execute(
+        """
+        INSERT INTO intelligence(
+          id,source_id,title,url,canonical_url,summary,content,kind,source_role,lane,
+          freshness_score,evidence_score,commercial_score,title_hash
+        ) VALUES('i3','s1','Second article same source','https://s1/b','https://s1/b',
+          'Second item from the same publisher','body','CLAIM','PRIMARY','COMPANY',100,90,90,'h-i3')
+        """
+    )
+    conn.execute("INSERT INTO cluster_items(cluster_id,intelligence_id) VALUES('cl','i3')")
+    conn.execute(
+        """
+        INSERT INTO research(
+          id,candidate_id,facts_json,claims_json,inferences_json,strongest_counter,evidence_gap,generated_by
+        ) VALUES('r-same','c',?,?,?,'','','test')
+        """,
+        (
+            '[{"text":"Fact A","evidence_ids":["i1"],"note":""},'
+            '{"text":"Fact B","evidence_ids":["i3"],"note":""}]',
+            '[]',
+            '[]',
+        ),
+    )
+    conn.commit()
+
+    def should_not_call(*args, **kwargs):
+        raise AssertionError("model should not be called before independent-source gate")
+
+    monkeypatch.setattr(writing,"chat_json",should_not_call)
+    research=writing.latest_research(conn,"c")
+    assert research["grounding"]["evidence_count"] == 2
+    assert research["grounding"]["independent_source_count"] == 1
+
+    with pytest.raises(ValueError, match="independent sources"):
+        writing.propose_thesis(conn,"c")
