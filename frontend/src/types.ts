@@ -14,6 +14,9 @@ export type Candidate = {
   content_score: number
   action: 'WRITE' | 'TRACK' | 'HOLD' | 'SKIP'
   cognition_status: string
+  evidence_items?: number
+  source_count?: number
+  quality_source_count?: number
 }
 
 export type Evidence = {
