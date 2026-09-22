@@ -283,6 +283,7 @@ CREATE TABLE IF NOT EXISTS media_assets (
   prompt TEXT,
   aspect_ratio TEXT,
   source_url TEXT,
+  evidence_ids_json TEXT NOT NULL DEFAULT '[]',
   local_path TEXT,
   status TEXT NOT NULL DEFAULT 'SUGGESTED' CHECK(status IN ('SUGGESTED','READY','USED','REJECTED')),
   generated_by TEXT,
