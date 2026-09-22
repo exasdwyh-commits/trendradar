@@ -20,8 +20,11 @@ quality:
   discovery_can_support_high_confidence_alone: false
 
 ranking:
+  fast_pool_size: 40
   cognition_pool_size: 12
   content_pool_size: 8
+  candidate_snapshot_size: 20
+  blind_sample_size: 10
   homepage_items: 3
 
 editorial:
