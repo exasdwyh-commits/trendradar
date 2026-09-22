@@ -4,7 +4,6 @@ on:
   push:
     branches:
       - master
-      - feat/coin-intelligence-workbench-v3
   pull_request:
 
 jobs:
@@ -28,6 +27,13 @@ jobs:
 
       - name: Backend tests
         run: pytest -q
+
+      - name: Falsification gates
+        run: |
+          pytest -q tests/test_trend_falsify.py
+          pytest -q tests/test_publication_gate.py
+          pytest -q tests/test_evaluation.py
+          pytest -q tests/test_llm_gateway.py
 
       - name: CLI smoke tests
         run: |
