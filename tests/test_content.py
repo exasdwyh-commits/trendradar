@@ -1,7 +1,7 @@
 import sqlite3
 from pathlib import Path
 
-import trendradar.content as content_mod
+import trendradar.services.media as media_mod
 from trendradar.content import create_blank_document, get_document, restore_version, save_document
 from trendradar.db import init_db
 
@@ -45,9 +45,9 @@ def test_save_and_restore_are_append_only():
 def test_image_plan_rejects_untraceable_data_chart(monkeypatch):
     conn=db()
     doc_id=create_blank_document(conn,"测试文章")
-    monkeypatch.setattr(content_mod,"slot_enabled",lambda name: True)
+    monkeypatch.setattr(media_mod,"slot_enabled",lambda name: True)
     monkeypatch.setattr(
-        content_mod,
+        media_mod,
         "chat_json",
         lambda *args,**kwargs: ({
             "items":[
@@ -73,7 +73,7 @@ def test_image_plan_rejects_untraceable_data_chart(monkeypatch):
         },"writer-model"),
     )
 
-    items=content_mod.create_image_plan(conn,doc_id)
+    items=media_mod.create_image_plan(conn,doc_id)
     assert len(items)==1
     assert items[0]["type"]=="DIAGRAM"
     row=conn.execute("SELECT * FROM media_assets WHERE document_id=?",(doc_id,)).fetchone()
