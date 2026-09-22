@@ -118,3 +118,22 @@ def test_calibration_summary_tracks_human_and_system_disagreements():
     assert report["diagnostic_only"] is True
     types = {item["type"] for item in report["disagreements"]}
     assert types == {"HUMAN_ONLY","SYSTEM_ONLY"}
+
+
+
+def test_blind_round_exposes_frozen_ranking_mode():
+    conn = db()
+    seed_candidates(conn, 10)
+    run_id = freeze_candidate_run(
+        conn,
+        None,
+        lookback_hours=72,
+        max_items=20,
+        ranking_mode="COGNITION",
+        ranking_meta={"cognition_model":"test-model","cognition_processed":10},
+    )
+    round_id = ensure_blind_round(conn, run_id)
+    detail = blind_round_detail(conn, round_id)
+
+    assert detail["ranking_mode"] == "COGNITION"
+    assert detail["ranking_meta"]["cognition_model"] == "test-model"
