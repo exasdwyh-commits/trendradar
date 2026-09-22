@@ -14,6 +14,7 @@ from .content import (
     mark_variant_published, restore_version, save_document,
 )
 from .db import connect, init_db
+from .evaluation import evaluation_summary, latest_blind_round, submit_blind_round
 from .exporter import export_markdown, export_wechat_html
 from .llm import slot_status
 from .pipeline import today
@@ -47,6 +48,10 @@ class PlatformVariantBody(BaseModel):
 
 class PublishedBody(BaseModel):
     external_url: str | None = None
+
+
+class BlindSubmitBody(BaseModel):
+    picks: list[str]
 
 
 def _json_fields(data: dict, fields: list[str]) -> dict:
@@ -318,6 +323,78 @@ def create_app(root: str | Path | None = None) -> FastAPI:
             """,(max(1,min(limit,200)),)
         ).fetchall()
         return {"items":[dict(r) for r in rows]}
+
+
+    @app.get("/api/blind/latest")
+    def blind_latest():
+        return {"round": latest_blind_round(conn), "summary": evaluation_summary(conn)}
+
+    @app.post("/api/blind/{round_id}/submit")
+    def blind_submit(round_id: str, body: BlindSubmitBody):
+        try:
+            return {
+                "round": submit_blind_round(conn, round_id, body.picks),
+                "summary": evaluation_summary(conn),
+            }
+        except Exception as exc:
+            raise HTTPException(400, str(exc)) from exc
+
+    @app.get("/api/evaluation")
+    def evaluation():
+        return evaluation_summary(conn)
+
+    @app.get("/api/ai-runs")
+    def ai_runs(limit: int = 100):
+        rows = conn.execute(
+            """
+            SELECT * FROM ai_runs
+            ORDER BY id DESC
+            LIMIT ?
+            """,
+            (max(1,min(limit,300)),),
+        ).fetchall()
+        aggregate = conn.execute(
+            """
+            SELECT slot,task,
+              COUNT(*) calls,
+              SUM(ok) ok_calls,
+              SUM(input_tokens) input_tokens,
+              SUM(output_tokens) output_tokens,
+              SUM(retries) retries,
+              ROUND(AVG(duration_ms),1) avg_duration_ms
+            FROM ai_runs
+            GROUP BY slot,task
+            ORDER BY calls DESC
+            """
+        ).fetchall()
+        return {"items":[dict(r) for r in rows],"aggregate":[dict(r) for r in aggregate]}
+
+    @app.get("/api/source-yield")
+    def source_yield():
+        rows = conn.execute(
+            """
+            SELECT s.id,s.name,s.role,s.tier,s.reliability,s.business_value,s.noise,s.accuracy,
+              COUNT(DISTINCT i.id) intelligence_count,
+              COUNT(DISTINCT c.id) candidate_count,
+              COUNT(DISTINCT CASE WHEN c.action='WRITE' THEN c.id END) write_count,
+              COUNT(DISTINCT CASE WHEN cri.content_rank<=3 THEN cri.run_id || ':' || c.id END) top3_count
+            FROM sources s
+            LEFT JOIN intelligence i ON i.source_id=s.id
+            LEFT JOIN cluster_items ci ON ci.intelligence_id=i.id
+            LEFT JOIN candidates c ON c.cluster_id=ci.cluster_id
+            LEFT JOIN candidate_run_items cri ON cri.candidate_id=c.id
+            GROUP BY s.id
+            ORDER BY s.tier ASC, top3_count DESC, candidate_count DESC, s.name ASC
+            """
+        ).fetchall()
+        items = []
+        for row in rows:
+            item = dict(row)
+            total = item["intelligence_count"] or 0
+            item["candidate_yield"] = round(item["candidate_count"]/total,4) if total else None
+            item["write_yield"] = round(item["write_count"]/total,4) if total else None
+            items.append(item)
+        return {"items":items}
 
     @app.get("/api/sources")
     def sources():
