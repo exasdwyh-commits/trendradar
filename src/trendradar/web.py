@@ -13,7 +13,7 @@ from .content import (
     export_variant, get_document, list_documents, list_publish_center,
     mark_variant_published, restore_version, save_document,
 )
-from .db import connect, init_db
+from .db import connect, init_db, schema_version
 from .evaluation import calibration_summary, evaluation_summary, latest_blind_round, submit_blind_round
 from .exporter import export_markdown, export_wechat_html
 from .llm import slot_status
@@ -92,7 +92,12 @@ def create_app(root: str | Path | None = None) -> FastAPI:
     @app.get("/api/health")
     def health():
         last = conn.execute("SELECT * FROM runs ORDER BY started_at DESC LIMIT 1").fetchone()
-        return {"ok": True, "last_run": dict(last) if last else None, "models": slot_status()}
+        return {
+            "ok": True,
+            "schema_version": schema_version(conn),
+            "last_run": dict(last) if last else None,
+            "models": slot_status(),
+        }
 
     @app.get("/api/dashboard")
     def dashboard():
