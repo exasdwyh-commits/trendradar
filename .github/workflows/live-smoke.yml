@@ -1,6 +1,7 @@
 name: live-smoke
 
 # Runs the real network collector on a clean GitHub runner; no model secrets required.
+# Also validates source windows, corroboration gates and China-source parsing changes.
 
 on:
   workflow_dispatch:
