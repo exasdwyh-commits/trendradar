@@ -1,0 +1,99 @@
+name: live-smoke
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - master
+    paths:
+      - ".github/workflows/live-smoke.yml"
+
+jobs:
+  live-pipeline:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install
+        run: |
+          python -m pip install --upgrade pip
+          pip install -e ".[dev]"
+
+      - name: Initialize
+        run: trendradar init
+
+      - name: Run one live daily round
+        run: trendradar daily
+
+      - name: Verify live collection and degraded model path
+        run: |
+          python - <<'PY'
+          import json
+          import sqlite3
+          from pathlib import Path
+
+          db = Path("data/trendradar.db")
+          assert db.exists(), "database was not created"
+          conn = sqlite3.connect(db)
+          conn.row_factory = sqlite3.Row
+
+          run = conn.execute(
+              "SELECT * FROM runs WHERE run_type='daily' ORDER BY started_at DESC LIMIT 1"
+          ).fetchone()
+          assert run is not None, "daily run missing"
+          assert run["status"] == "SUCCESS", dict(run)
+
+          stats = json.loads(run["stats_json"] or "{}")
+          collection = stats.get("collection") or {}
+          assert collection.get("sources_ok", 0) > 0, collection
+          assert collection.get("items_seen", 0) > 0, collection
+
+          source_health = conn.execute(
+              """
+              SELECT
+                COUNT(*) total,
+                SUM(CASE WHEN last_success_at IS NOT NULL THEN 1 ELSE 0 END) ok,
+                SUM(CASE WHEN last_error IS NOT NULL THEN 1 ELSE 0 END) failed
+              FROM source_health
+              """
+          ).fetchone()
+
+          counts = {}
+          for table in ("sources","intelligence","story_clusters","candidates","candidate_runs","blind_rounds"):
+              counts[table] = conn.execute(f"SELECT COUNT(*) FROM {table}").fetchone()[0]
+
+          report = {
+              "run_status": run["status"],
+              "collection": collection,
+              "source_health": dict(source_health),
+              "counts": counts,
+              "fast_rank": stats.get("fast_rank"),
+              "cognition": stats.get("cognition"),
+              "world_model": stats.get("world_model"),
+              "candidate_run_id": stats.get("candidate_run_id"),
+              "blind_round_id": stats.get("blind_round_id"),
+          }
+          Path("output").mkdir(exist_ok=True)
+          Path("output/live-smoke-report.json").write_text(
+              json.dumps(report, ensure_ascii=False, indent=2),
+              encoding="utf-8",
+          )
+          print(json.dumps(report, ensure_ascii=False, indent=2))
+          PY
+
+      - name: CLI status
+        run: trendradar status
+
+      - name: Upload smoke artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: live-smoke-report
+          path: |
+            output/live-smoke-report.json
+            output/daily/*.md
+          if-no-files-found: warn
