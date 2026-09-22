@@ -116,3 +116,18 @@ def test_ai_gateway_blocks_when_rolling_budget_is_reached(monkeypatch):
     assert row is not None
     assert row["ok"] == 0
     assert "budget reached" in row["error"]
+
+
+
+def test_slot_can_use_shared_gateway_credentials(monkeypatch):
+    monkeypatch.delenv("RESEARCH_MODEL_BASE_URL", raising=False)
+    monkeypatch.delenv("RESEARCH_MODEL_API_KEY", raising=False)
+    monkeypatch.setenv("MODEL_BASE_URL", "https://shared.example")
+    monkeypatch.setenv("MODEL_API_KEY", "shared-secret")
+    monkeypatch.setenv("RESEARCH_MODEL_MODEL", "research-model")
+
+    slot=llm.load_slot("RESEARCH_MODEL")
+    assert slot.enabled is True
+    assert slot.base_url=="https://shared.example"
+    assert slot.api_key=="shared-secret"
+    assert slot.model=="research-model"
