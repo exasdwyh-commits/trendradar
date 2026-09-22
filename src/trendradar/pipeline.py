@@ -141,6 +141,12 @@ def _existing_clusters(conn: sqlite3.Connection, lane: str) -> list[sqlite3.Row]
     return conn.execute(
         """
         SELECT sc.id,sc.canonical_title,
+          (
+            SELECT MAX(COALESCE(i.published_at,i.collected_at))
+            FROM cluster_items ci
+            JOIN intelligence i ON i.id=ci.intelligence_id
+            WHERE ci.cluster_id=sc.id
+          ) latest_at,
           COALESCE((
             SELECT i.summary || ' ' || i.content
             FROM cluster_items ci
@@ -158,10 +164,23 @@ def _existing_clusters(conn: sqlite3.Connection, lane: str) -> list[sqlite3.Row]
     ).fetchall()
 
 
+def _parse_db_datetime(value: str | None) -> datetime | None:
+    if not value:
+        return None
+    try:
+        parsed = datetime.fromisoformat(value.replace("Z","+00:00"))
+        if parsed.tzinfo is None:
+            parsed = parsed.replace(tzinfo=timezone.utc)
+        return parsed
+    except ValueError:
+        return None
+
+
 def cluster_unassigned(conn: sqlite3.Connection, threshold: float = 0.40, limit: int = 800) -> int:
     rows = conn.execute(
         """
-        SELECT i.id,i.title,i.lane,COALESCE(i.summary,'') summary,COALESCE(i.content,'') content
+        SELECT i.id,i.title,i.lane,COALESCE(i.summary,'') summary,COALESCE(i.content,'') content,
+               COALESCE(i.published_at,i.collected_at) event_at
         FROM intelligence i
         LEFT JOIN cluster_items ci ON ci.intelligence_id=i.id
         WHERE ci.intelligence_id IS NULL AND i.origin='live'
@@ -178,7 +197,13 @@ def cluster_unassigned(conn: sqlite3.Connection, threshold: float = 0.40, limit:
         best = None
         best_score = 0.0
         body = f"{row['summary']} {row['content']}"
+        event_at = _parse_db_datetime(row["event_at"])
         for cluster in candidates:
+            cluster_at = _parse_db_datetime(
+                cluster.get("latest_at") if isinstance(cluster, dict) else cluster["latest_at"]
+            )
+            if event_at and cluster_at and abs((event_at - cluster_at).total_seconds()) > 7 * 86400:
+                continue
             score = same_event_score(
                 row["title"],
                 body,
@@ -199,6 +224,7 @@ def cluster_unassigned(conn: sqlite3.Connection, threshold: float = 0.40, limit:
                 "id": cluster_id,
                 "canonical_title": row["title"],
                 "representative_body": body,
+                "latest_at": row["event_at"],
             })
             created += 1
         conn.execute(
