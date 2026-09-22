@@ -31,8 +31,8 @@ def load_slot(name: str) -> Slot:
     prefix = name.upper()
     return Slot(
         name=name,
-        base_url=os.getenv(f"{prefix}_BASE_URL", "").rstrip("/"),
-        api_key=os.getenv(f"{prefix}_API_KEY", ""),
+        base_url=(os.getenv(f"{prefix}_BASE_URL") or os.getenv("MODEL_BASE_URL","")).rstrip("/"),
+        api_key=os.getenv(f"{prefix}_API_KEY") or os.getenv("MODEL_API_KEY",""),
         model=os.getenv(f"{prefix}_MODEL", ""),
         input_cny_per_million=float(os.getenv(f"{prefix}_INPUT_CNY_PER_M", "0") or 0),
         output_cny_per_million=float(os.getenv(f"{prefix}_OUTPUT_CNY_PER_M", "0") or 0),
