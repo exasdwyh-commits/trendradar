@@ -40,17 +40,31 @@ def freeze_publication_snapshot(
         row = conn.execute("SELECT * FROM candidates WHERE id=?", (document["candidate_id"],)).fetchone()
         if row:
             candidate = dict(row)
-            evidence = [
-                dict(x) for x in conn.execute(
-                    """
-                    SELECT i.* FROM cluster_items ci
-                    JOIN intelligence i ON i.id=ci.intelligence_id
-                    WHERE ci.cluster_id=?
-                    ORDER BY i.evidence_score DESC
-                    """,
-                    (row["cluster_id"],),
-                ).fetchall()
-            ]
+            linked = conn.execute(
+                """
+                SELECT i.*,el.relation,el.note
+                FROM evidence_links el
+                JOIN intelligence i ON i.id=el.intelligence_id
+                WHERE el.document_id=?
+                ORDER BY CASE el.relation WHEN 'SUPPORT' THEN 0 WHEN 'COUNTER' THEN 1 ELSE 2 END,
+                         i.evidence_score DESC
+                """,
+                (document_id,),
+            ).fetchall()
+            if linked:
+                evidence = [dict(x) for x in linked]
+            else:
+                evidence = [
+                    dict(x) for x in conn.execute(
+                        """
+                        SELECT i.* FROM cluster_items ci
+                        JOIN intelligence i ON i.id=ci.intelligence_id
+                        WHERE ci.cluster_id=?
+                        ORDER BY i.evidence_score DESC
+                        """,
+                        (row["cluster_id"],),
+                    ).fetchall()
+                ]
         r = conn.execute(
             """
             SELECT * FROM research
