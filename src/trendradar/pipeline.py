@@ -329,7 +329,17 @@ def today(conn: sqlite3.Connection, limit: int = 3) -> list[dict]:
     rows = conn.execute(
         """
         SELECT c.*,
-          (SELECT COUNT(*) FROM cluster_items ci WHERE ci.cluster_id=c.cluster_id) evidence_items
+          (SELECT COUNT(*) FROM cluster_items ci WHERE ci.cluster_id=c.cluster_id) evidence_items,
+          (
+            SELECT COUNT(DISTINCT i.source_id)
+            FROM cluster_items ci JOIN intelligence i ON i.id=ci.intelligence_id
+            WHERE ci.cluster_id=c.cluster_id
+          ) source_count,
+          (
+            SELECT COUNT(DISTINCT i.source_id)
+            FROM cluster_items ci JOIN intelligence i ON i.id=ci.intelligence_id
+            WHERE ci.cluster_id=c.cluster_id AND i.source_role IN ('PRIMARY','VERIFIER')
+          ) quality_source_count
         FROM candidates c
         WHERE c.action != 'SKIP'
         ORDER BY
