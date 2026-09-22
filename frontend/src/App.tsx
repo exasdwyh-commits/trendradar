@@ -93,8 +93,9 @@ function Today({onResearch}:{onResearch:(id:string)=>void}){
 }
 
 function FocusCard({item,index,onResearch}:{item:Candidate;index:number;onResearch:(id:string)=>void}){
+  const corroborated=(item.source_count||0)>=2 && (item.quality_source_count||0)>=1
   return <article className={`focus-card rank-${index}`}>
-    <div className="card-kicker">{index===0?'今日首选':index===1?'值得关注':'继续观察'}</div>
+    <div className="focus-topline"><div className="card-kicker">{index===0?'今日首选':index===1?'值得关注':'继续观察'}</div><Pill tone={corroborated?'green':'amber'}>{corroborated?`已交叉验证 ${item.source_count} 源`:'待第二来源'}</Pill></div>
     <h2>{item.title}</h2>
     <p className="event">{item.event_summary}</p>
     <dl><div><dt>真正改变</dt><dd>{item.what_changed||'等待认知层分析'}</dd></div><div><dt>商业含义</dt><dd>{item.profit_pool||'等待利润池判断'}</dd></div></dl>
