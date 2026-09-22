@@ -9,6 +9,86 @@ from .llm import chat_json
 from .prompts import CRITIC_SYSTEM, RESEARCH_SYSTEM, THESIS_SYSTEM, WRITER_SYSTEM
 
 
+
+def _normalize_research_items(raw: object, allowed_ids: set[str], kind: str) -> list[dict]:
+    items: list[dict] = []
+    if not isinstance(raw, list):
+        return items
+    for entry in raw:
+        if isinstance(entry, str):
+            text = entry.strip()
+            evidence_ids: list[str] = []
+            note = ""
+        elif isinstance(entry, dict):
+            text = str(entry.get("text") or "").strip()
+            raw_ids = entry.get("evidence_ids") or []
+            if isinstance(raw_ids, str):
+                raw_ids = [raw_ids]
+            evidence_ids = [
+                str(value) for value in raw_ids
+                if str(value) in allowed_ids
+            ] if isinstance(raw_ids, list) else []
+            evidence_ids = list(dict.fromkeys(evidence_ids))
+            note = str(entry.get("note") or "").strip()
+        else:
+            continue
+        if not text:
+            continue
+        # FACT/CLAIM without a traceable source are not allowed to enter the
+        # durable research pack. INFER may survive without ids, but is visibly
+        # classified as inference rather than evidence.
+        if kind in {"FACT","CLAIM"} and not evidence_ids:
+            continue
+        items.append({
+            "text": text,
+            "evidence_ids": evidence_ids,
+            "note": note,
+        })
+    return items
+
+
+def _grounding_summary(items_by_kind: dict[str, list[dict]]) -> dict:
+    grounded_units = 0
+    evidence_ids: set[str] = set()
+    for kind, items in items_by_kind.items():
+        for item in items:
+            ids = {str(x) for x in item.get("evidence_ids") or []}
+            if ids:
+                grounded_units += 1
+                evidence_ids.update(ids)
+    return {
+        "grounded_units": grounded_units,
+        "evidence_ids": sorted(evidence_ids),
+        "evidence_count": len(evidence_ids),
+    }
+
+
+def _persist_research_items(
+    conn: sqlite3.Connection,
+    research_id: str,
+    candidate_id: str,
+    items_by_kind: dict[str, list[dict]],
+) -> None:
+    for kind, items in items_by_kind.items():
+        for item in items:
+            item_id = uuid.uuid4().hex
+            conn.execute(
+                """
+                INSERT INTO research_items(id,research_id,candidate_id,kind,text,note)
+                VALUES(?,?,?,?,?,?)
+                """,
+                (item_id,research_id,candidate_id,kind,item["text"],item.get("note","")),
+            )
+            for intelligence_id in item.get("evidence_ids") or []:
+                conn.execute(
+                    """
+                    INSERT OR IGNORE INTO research_item_sources(research_item_id,intelligence_id)
+                    VALUES(?,?)
+                    """,
+                    (item_id,intelligence_id),
+                )
+
+
 def candidate_material(conn: sqlite3.Connection, candidate_id: str) -> dict:
     candidate = conn.execute("SELECT * FROM candidates WHERE id=?", (candidate_id,)).fetchone()
     if not candidate:
@@ -37,6 +117,12 @@ def latest_research(conn: sqlite3.Connection, candidate_id: str) -> dict | None:
     data = dict(row)
     for key in ("facts_json","claims_json","inferences_json"):
         data[key.removesuffix("_json")] = json.loads(data.pop(key) or "[]")
+    items_by_kind = {
+        "FACT": data.get("facts") or [],
+        "CLAIM": data.get("claims") or [],
+        "INFER": data.get("inferences") or [],
+    }
+    data["grounding"] = _grounding_summary(items_by_kind)
     return data
 
 
@@ -46,6 +132,29 @@ def research_candidate(conn: sqlite3.Connection, candidate_id: str) -> str:
         "RESEARCH_MODEL", RESEARCH_SYSTEM, json.dumps(material, ensure_ascii=False),
         conn=conn, task="research"
     )
+
+    allowed_ids = {str(item["id"]) for item in material["evidence"]}
+    items_by_kind = {
+        "FACT": _normalize_research_items(data.get("facts"), allowed_ids, "FACT"),
+        "CLAIM": _normalize_research_items(data.get("claims"), allowed_ids, "CLAIM"),
+        "INFER": _normalize_research_items(data.get("inferences"), allowed_ids, "INFER"),
+    }
+    grounding = _grounding_summary(items_by_kind)
+
+    evidence_gap = str(data.get("evidence_gap") or "").strip()
+    dropped_note = ""
+    raw_grounded = sum(
+        len(data.get(key) or []) if isinstance(data.get(key), list) else 0
+        for key in ("facts","claims")
+    )
+    kept_grounded = len(items_by_kind["FACT"]) + len(items_by_kind["CLAIM"])
+    if raw_grounded > kept_grounded:
+        dropped_note = "研究模型返回了无法追溯到输入 evidence id 的事实/主张，系统已自动丢弃。"
+    if grounding["evidence_count"] < 2:
+        insuff = "当前研究包尚未形成两个独立 evidence id 的交叉支撑。"
+        dropped_note = f"{dropped_note} {insuff}".strip()
+    evidence_gap = f"{evidence_gap} {dropped_note}".strip()
+
     rid = uuid.uuid4().hex
     conn.execute(
         """
@@ -54,14 +163,15 @@ def research_candidate(conn: sqlite3.Connection, candidate_id: str) -> str:
         """,
         (
             rid,candidate_id,
-            json.dumps(data.get("facts",[]),ensure_ascii=False),
-            json.dumps(data.get("claims",[]),ensure_ascii=False),
-            json.dumps(data.get("inferences",[]),ensure_ascii=False),
+            json.dumps(items_by_kind["FACT"],ensure_ascii=False),
+            json.dumps(items_by_kind["CLAIM"],ensure_ascii=False),
+            json.dumps(items_by_kind["INFER"],ensure_ascii=False),
             data.get("strongest_counter",""),
-            data.get("evidence_gap",""),
+            evidence_gap,
             model,
         ),
     )
+    _persist_research_items(conn,rid,candidate_id,items_by_kind)
     conn.commit()
     return rid
 
@@ -70,6 +180,9 @@ def propose_thesis(conn: sqlite3.Connection, candidate_id: str) -> str:
     research = latest_research(conn, candidate_id)
     if not research:
         raise ValueError("research is required before thesis")
+    grounding = research.get("grounding") or {}
+    if int(grounding.get("grounded_units") or 0) < 2 or int(grounding.get("evidence_count") or 0) < 2:
+        raise ValueError("research requires at least 2 grounded units from 2 evidence items before thesis")
     material = candidate_material(conn, candidate_id)
     data, model = chat_json(
         "RESEARCH_MODEL",
