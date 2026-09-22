@@ -163,6 +163,25 @@ CREATE TABLE IF NOT EXISTS research (
   created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 
+CREATE TABLE IF NOT EXISTS research_items (
+  id TEXT PRIMARY KEY,
+  research_id TEXT NOT NULL REFERENCES research(id) ON DELETE CASCADE,
+  candidate_id TEXT NOT NULL REFERENCES candidates(id) ON DELETE CASCADE,
+  kind TEXT NOT NULL CHECK(kind IN ('FACT','CLAIM','INFER')),
+  text TEXT NOT NULL,
+  note TEXT,
+  created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE IF NOT EXISTS research_item_sources (
+  research_item_id TEXT NOT NULL REFERENCES research_items(id) ON DELETE CASCADE,
+  intelligence_id TEXT NOT NULL REFERENCES intelligence(id) ON DELETE CASCADE,
+  PRIMARY KEY(research_item_id, intelligence_id)
+);
+
+CREATE INDEX IF NOT EXISTS idx_research_items_research ON research_items(research_id, kind);
+CREATE INDEX IF NOT EXISTS idx_research_item_sources_intel ON research_item_sources(intelligence_id);
+
 CREATE TABLE IF NOT EXISTS theses (
   id TEXT PRIMARY KEY,
   candidate_id TEXT NOT NULL REFERENCES candidates(id),
