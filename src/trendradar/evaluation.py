@@ -57,6 +57,8 @@ def freeze_candidate_run(
     *,
     lookback_hours: int = 72,
     max_items: int = 20,
+    ranking_mode: str = "RULE",
+    ranking_meta: dict | None = None,
 ) -> str:
     rows = _recent_candidate_rows(conn, lookback_hours=lookback_hours)
     if not rows:
@@ -66,7 +68,17 @@ def freeze_candidate_run(
             INSERT INTO candidate_runs(id,pipeline_run_id,status,system_top3_json,settings_json)
             VALUES(?,?,'FROZEN','[]',?)
             """,
-            (run_id,pipeline_run_id,json.dumps({"lookback_hours":lookback_hours},ensure_ascii=False)),
+            (
+                run_id,pipeline_run_id,
+                json.dumps(
+                    {
+                        "lookback_hours":lookback_hours,
+                        "ranking_mode":ranking_mode,
+                        "ranking_meta":ranking_meta or {},
+                    },
+                    ensure_ascii=False,
+                ),
+            ),
         )
         conn.commit()
         return run_id
@@ -108,6 +120,8 @@ def freeze_candidate_run(
                     "max_items":max_items,
                     "content_pool":min(max_items,len(content_sorted)),
                     "cognition_pool":min(max_items,len(cognition_sorted)),
+                    "ranking_mode":ranking_mode,
+                    "ranking_meta":ranking_meta or {},
                 },
                 ensure_ascii=False,
             ),
@@ -224,11 +238,23 @@ def blind_round_detail(conn: sqlite3.Connection, round_id: str) -> dict:
     if not row:
         raise KeyError("blind round not found")
     submitted = bool(row["submitted_at"])
+    run = conn.execute(
+        "SELECT settings_json FROM candidate_runs WHERE id=?",
+        (row["candidate_run_id"],),
+    ).fetchone()
+    settings = {}
+    if run:
+        try:
+            settings = json.loads(run["settings_json"] or "{}")
+        except json.JSONDecodeError:
+            settings = {}
     result = {
         "id":row["id"],
         "round_date":row["round_date"],
         "submitted":submitted,
         "items":_blind_item_payload(conn,round_id),
+        "ranking_mode":settings.get("ranking_mode","RULE"),
+        "ranking_meta":settings.get("ranking_meta") or {},
     }
     if submitted:
         result.update(
@@ -287,15 +313,32 @@ def submit_blind_round(
 def evaluation_summary(conn: sqlite3.Connection, recent: int = 14) -> dict:
     rows = conn.execute(
         """
-        SELECT id,round_date,hits,submitted_at
-        FROM blind_rounds
+        SELECT br.id,br.round_date,br.hits,br.submitted_at,cr.settings_json
+        FROM blind_rounds br
+        LEFT JOIN candidate_runs cr ON cr.id=br.candidate_run_id
         WHERE submitted_at IS NOT NULL
         ORDER BY round_date DESC
         LIMIT ?
         """,
         (recent,),
     ).fetchall()
-    rounds = [dict(r) for r in rows]
+    rounds = []
+    mode_stats: dict[str,dict] = {}
+    for row in rows:
+        item=dict(row)
+        try:
+            settings=json.loads(item.pop("settings_json") or "{}")
+        except json.JSONDecodeError:
+            settings={}
+        mode=settings.get("ranking_mode","RULE")
+        item["ranking_mode"]=mode
+        rounds.append(item)
+        bucket=mode_stats.setdefault(mode,{"rounds":0,"hits":0,"possible":0})
+        bucket["rounds"]+=1
+        bucket["hits"]+=int(row["hits"] or 0)
+        bucket["possible"]+=3
+    for bucket in mode_stats.values():
+        bucket["hit_rate"]=round(bucket["hits"]/bucket["possible"],4) if bucket["possible"] else None
     hits = sum(int(r["hits"] or 0) for r in rows)
     possible = len(rows) * 3
     return {
@@ -303,6 +346,7 @@ def evaluation_summary(conn: sqlite3.Connection, recent: int = 14) -> dict:
         "hits":hits,
         "possible":possible,
         "hit_rate":round(hits/possible,4) if possible else None,
+        "by_mode":mode_stats,
         "recent":rounds,
     }
 
