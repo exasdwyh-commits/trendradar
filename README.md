@@ -48,6 +48,21 @@ TrendRadar 已从旧版“全网热榜雷达”彻底重构成一个 **商业内
 
 “值得写”和“值得长期理解”永远不是一个分数。
 
+## 质量控制与自我校准
+
+TrendRadar 3.1 不把“AI看起来聪明”当成质量指标，而是增加可验证的后台纪律：
+
+- **Source Tier + Yield**：来源分 T1–T4，并记录 reliability / business_value / noise / accuracy / max_per_round；长期观察“采集多少 → 进入候选多少 → WRITE多少 → TOP3多少”。
+- **两条排名线**：cognition_score 与 content_score 分开，长期趋势不被公众号传播性绑架。
+- **Candidate Run Freeze**：每天冻结当时的候选、分数、证据与系统 TOP3，历史不会被后续重算覆盖。
+- **盲评 10→3**：提交人工选择前隐藏系统排名，提交后再比较命中率，只检验选题选择能力。
+- **AI Gateway Telemetry**：记录模型槽位、任务、Token、重试、HTTP状态和延迟；429/5xx 自动有界重试。
+- **Graceful Degradation**：FAST / COGNITION / World Model 某一步模型失败，不再拖垮整条日任务。
+- **Falsification Tests**：Discovery 单源、同主体趋势、未过 Challenger 发布等关键边界必须“故意破坏时变红”。
+- **Publication Snapshot**：正式发布时冻结当时的母稿、Thesis、Research、Evidence 和平台版本，供未来复盘。
+
+专业工具增加 **盲评 10→3、来源产出率、AI调用质量**，但这些信息不会污染首页决策界面。
+
 ## 前端
 
 3.1 开始使用 **React + TypeScript + Vite + TipTap**。
