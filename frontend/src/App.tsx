@@ -8,7 +8,7 @@ import { api } from './api'
 import Editor from './components/Editor'
 import type {
   Candidate, DocumentDetail, DocumentSummary, Health, PlatformVariant,
-  Thesis, Trend, WorldModel
+  ResearchPack, Thesis, Trend, WorldModel
 } from './types'
 
 type View='today'|'decisions'|'research'|'studio'|'publish'|'trends'|'ledger'|'blind'|'sources'|'system'
