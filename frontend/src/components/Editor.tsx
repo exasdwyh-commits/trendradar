@@ -17,6 +17,12 @@ type Props = {
   onRestore: (version: number) => Promise<void>
   onImagePlan: () => Promise<void>
   onVariant: (platform: string) => Promise<void>
+  onAiEdit: (payload:{
+    selected_text:string
+    instruction:string
+    before_context:string
+    after_context:string
+  }) => Promise<{replacement:string;warning?:string;used_evidence_ids?:string[]}>
 }
 
 const platformName: Record<string,string> = {
@@ -86,11 +92,12 @@ function PlatformList({items,onVariant}:{items:PlatformVariant[];onVariant:(plat
 }
 
 export default function Editor({
-  document, saving, onSave, onRestore, onImagePlan, onVariant
+  document, saving, onSave, onRestore, onImagePlan, onVariant, onAiEdit
 }:Props) {
   const [title,setTitle]=useState(document.title)
   const [tab,setTab]=useState<'evidence'|'media'|'versions'|'platforms'>('evidence')
   const [dirty,setDirty]=useState(false)
+  const [aiEditing,setAiEditing]=useState(false)
   const lastSaved=useRef(document.current_version)
 
   const initialContent=useMemo(
@@ -136,6 +143,35 @@ export default function Editor({
     else editor.chain().focus().extendMarkRange('link').setLink({href:url}).run()
   }
   const manualSave=()=>void onSave(title,editor.getJSON() as Record<string,unknown>,editor.getHTML(),editor.getText(),'手动保存').then(()=>setDirty(false))
+  const aiEditSelection=async()=>{
+    const {from,to}=editor.state.selection
+    if(from===to){
+      window.alert('请先选中要修改的一段文字。')
+      return
+    }
+    const selected=editor.state.doc.textBetween(from,to,'\n').trim()
+    if(!selected)return
+    const instruction=window.prompt('怎么修改选中内容？例如：精简30%、加强逻辑、降低AI腔、把反方写得更强。')
+    if(!instruction?.trim())return
+    const size=editor.state.doc.content.size
+    const before=editor.state.doc.textBetween(Math.max(0,from-900),from,'\n')
+    const after=editor.state.doc.textBetween(to,Math.min(size,to+900),'\n')
+    setAiEditing(true)
+    try{
+      const result=await onAiEdit({
+        selected_text:selected,
+        instruction:instruction.trim(),
+        before_context:before,
+        after_context:after,
+      })
+      editor.chain().focus().insertContentAt({from,to},result.replacement).run()
+      setDirty(true)
+      if(result.warning)window.alert('AI编辑提示：'+result.warning)
+    }finally{
+      setAiEditing(false)
+    }
+  }
+
 
   const tabs=[
     ['evidence','证据',BookOpen],['media','配图',ImageIcon],['versions','版本',History],['platforms','平台',Share2]
@@ -158,6 +194,7 @@ export default function Editor({
         <ToolbarButton title="有序列表" active={editor.isActive('orderedList')} onClick={()=>editor.chain().focus().toggleOrderedList().run()}><ListOrdered size={16}/></ToolbarButton>
         <ToolbarButton title="引用" active={editor.isActive('blockquote')} onClick={()=>editor.chain().focus().toggleBlockquote().run()}><Quote size={16}/></ToolbarButton>
         <ToolbarButton title="链接" active={editor.isActive('link')} onClick={setLink}><Link2 size={16}/></ToolbarButton>
+        <ToolbarButton title="AI修改选中内容" onClick={()=>void aiEditSelection()}><Sparkles size={16}/>{aiEditing&&<span className="tool-mini">处理中</span>}</ToolbarButton>
         <span className="tool-sep"/>
         <ToolbarButton title="撤销" onClick={()=>editor.chain().focus().undo().run()}><Undo2 size={16}/></ToolbarButton>
         <ToolbarButton title="重做" onClick={()=>editor.chain().focus().redo().run()}><Redo2 size={16}/></ToolbarButton>
