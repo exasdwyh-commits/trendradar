@@ -21,7 +21,7 @@ def _recent_candidate_rows(
         JOIN cluster_items ci ON ci.cluster_id=c.cluster_id
         JOIN intelligence i ON i.id=ci.intelligence_id
         WHERE c.action != 'SKIP'
-          AND COALESCE(i.published_at,i.collected_at) >= ?
+          AND datetime(COALESCE(i.published_at,i.collected_at)) >= datetime(?)
         """,
         (cutoff,),
     ).fetchall()
