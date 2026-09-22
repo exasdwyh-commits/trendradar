@@ -18,6 +18,9 @@ class Slot:
     base_url: str
     api_key: str
     model: str
+    input_cny_per_million: float = 0.0
+    output_cny_per_million: float = 0.0
+    rolling_24h_call_limit: int = 0
 
     @property
     def enabled(self) -> bool:
@@ -31,6 +34,9 @@ def load_slot(name: str) -> Slot:
         base_url=os.getenv(f"{prefix}_BASE_URL", "").rstrip("/"),
         api_key=os.getenv(f"{prefix}_API_KEY", ""),
         model=os.getenv(f"{prefix}_MODEL", ""),
+        input_cny_per_million=float(os.getenv(f"{prefix}_INPUT_CNY_PER_M", "0") or 0),
+        output_cny_per_million=float(os.getenv(f"{prefix}_OUTPUT_CNY_PER_M", "0") or 0),
+        rolling_24h_call_limit=int(os.getenv(f"{prefix}_24H_CALL_LIMIT", "0") or 0),
     )
 
 
@@ -40,10 +46,68 @@ def slot_enabled(name: str) -> bool:
 
 def slot_status() -> dict[str, dict]:
     names = ["FAST_MODEL","COGNITION_MODEL","RESEARCH_MODEL","WRITING_MODEL","CRITIC_MODEL"]
-    return {
-        name: {"enabled": load_slot(name).enabled, "model": load_slot(name).model or None}
-        for name in names
-    }
+    result = {}
+    for name in names:
+        slot = load_slot(name)
+        result[name] = {
+            "enabled": slot.enabled,
+            "model": slot.model or None,
+            "input_cny_per_million": slot.input_cny_per_million or None,
+            "output_cny_per_million": slot.output_cny_per_million or None,
+            "rolling_24h_call_limit": slot.rolling_24h_call_limit or None,
+        }
+    return result
+
+
+
+def _estimate_cost_cny(slot: Slot, input_tokens: int, output_tokens: int) -> float:
+    return round(
+        max(0,input_tokens) / 1_000_000 * max(0.0,slot.input_cny_per_million)
+        + max(0,output_tokens) / 1_000_000 * max(0.0,slot.output_cny_per_million),
+        6,
+    )
+
+
+def _rolling_24h_usage(conn: sqlite3.Connection | None, slot_name: str | None = None) -> dict:
+    if conn is None:
+        return {"calls":0,"cost":0.0}
+    if slot_name:
+        row = conn.execute(
+            """
+            SELECT COUNT(*) calls,COALESCE(SUM(cost),0) cost
+            FROM ai_runs
+            WHERE run_at >= datetime('now','-24 hours') AND slot=? AND ok=1
+            """,
+            (slot_name,),
+        ).fetchone()
+    else:
+        row = conn.execute(
+            """
+            SELECT COUNT(*) calls,COALESCE(SUM(cost),0) cost
+            FROM ai_runs
+            WHERE run_at >= datetime('now','-24 hours') AND ok=1
+            """
+        ).fetchone()
+    return {"calls":int(row["calls"] or 0),"cost":float(row["cost"] or 0.0)}
+
+
+def _enforce_budget(conn: sqlite3.Connection | None, slot: Slot) -> None:
+    if conn is None:
+        return
+    if slot.rolling_24h_call_limit > 0:
+        usage = _rolling_24h_usage(conn,slot.name)
+        if usage["calls"] >= slot.rolling_24h_call_limit:
+            raise RuntimeError(
+                f"{slot.name} rolling 24h call limit reached: "
+                f"{usage['calls']}/{slot.rolling_24h_call_limit}"
+            )
+    global_budget = float(os.getenv("AI_24H_BUDGET_CNY","0") or 0)
+    if global_budget > 0:
+        usage = _rolling_24h_usage(conn)
+        if usage["cost"] >= global_budget:
+            raise RuntimeError(
+                f"AI rolling 24h budget reached: ¥{usage['cost']:.4f}/¥{global_budget:.4f}"
+            )
 
 
 def _json_from_text(text: str) -> Any:
@@ -82,6 +146,7 @@ def _log_ai_run(
     attempts: int = 1,
     retries: int = 0,
     http_status: int | None = None,
+    cost: float = 0.0,
 ) -> None:
     if conn is None:
         return
@@ -91,10 +156,10 @@ def _log_ai_run(
             INSERT INTO ai_runs(
               task,slot,model,input_tokens,output_tokens,cost,duration_ms,ok,error,
               attempts,retries,http_status
-            ) VALUES(?,?,?,?,?,0,?,?,?,?,?,?)
+            ) VALUES(?,?,?,?,?,?,?,?,?,?,?,?)
             """,
             (
-                task,slot,model,input_tokens,output_tokens,duration_ms,
+                task,slot,model,input_tokens,output_tokens,cost,duration_ms,
                 1 if ok else 0,error[:1000] if error else None,attempts,retries,http_status,
             ),
         )
@@ -130,6 +195,15 @@ def chat_json(
             ok=False,error=error,attempts=0,retries=0,
         )
         raise RuntimeError(error)
+
+    try:
+        _enforce_budget(conn,slot)
+    except RuntimeError as exc:
+        _log_ai_run(
+            conn,task=task_name,slot=slot_name,model=slot.model or None,
+            ok=False,error=str(exc),attempts=0,retries=0,
+        )
+        raise
 
     url = slot.base_url
     if not url.endswith("/chat/completions"):
@@ -179,14 +253,18 @@ def chat_json(
                 text = data["choices"][0]["message"]["content"]
                 parsed = _json_from_text(text)
                 usage = data.get("usage") or {}
+                input_tokens = int(usage.get("prompt_tokens") or usage.get("input_tokens") or 0)
+                output_tokens = int(usage.get("completion_tokens") or usage.get("output_tokens") or 0)
+                cost = _estimate_cost_cny(slot,input_tokens,output_tokens)
                 duration_ms = int((time.perf_counter() - started) * 1000)
                 _log_ai_run(
                     conn,
                     task=task_name,
                     slot=slot_name,
                     model=slot.model,
-                    input_tokens=int(usage.get("prompt_tokens") or usage.get("input_tokens") or 0),
-                    output_tokens=int(usage.get("completion_tokens") or usage.get("output_tokens") or 0),
+                    input_tokens=input_tokens,
+                    output_tokens=output_tokens,
+                    cost=cost,
                     duration_ms=duration_ms,
                     ok=True,
                     attempts=attempts,
