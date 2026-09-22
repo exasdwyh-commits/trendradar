@@ -42,6 +42,15 @@ def sync_sources(conn: sqlite3.Connection, sources: list[Source]) -> None:
             "enabled": 1 if s.enabled else 0, "note": s.note,
         } for s in sources],
     )
+    configured_ids = [s.id for s in sources]
+    if configured_ids:
+        placeholders = ",".join("?" for _ in configured_ids)
+        conn.execute(
+            f"UPDATE sources SET enabled=0 WHERE id NOT IN ({placeholders})",
+            configured_ids,
+        )
+    else:
+        conn.execute("UPDATE sources SET enabled=0")
     conn.commit()
 
 
