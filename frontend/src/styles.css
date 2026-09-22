@@ -64,3 +64,5 @@
 .blind-card h3{margin:0 0 7px;font-size:14px;line-height:1.5}.blind-card p{margin:0 0 9px;color:#737c88;font-size:12px;line-height:1.6}
 .blind-submit{position:sticky;bottom:16px;margin-top:16px;background:rgba(255,255,255,.96);backdrop-filter:blur(10px);border:1px solid var(--line);border-radius:12px;padding:12px 14px;display:flex;justify-content:space-between;align-items:center;box-shadow:0 10px 30px rgba(0,0,0,.05)}
 .source-yield{display:flex;gap:10px;margin-top:7px;color:#89909a;font-size:10px}
+
+.focus-topline{display:flex;align-items:center;justify-content:space-between;gap:10px}.focus-topline .pill{margin-right:0}
