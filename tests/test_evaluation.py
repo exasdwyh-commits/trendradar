@@ -5,6 +5,7 @@ from pathlib import Path
 from trendradar.db import init_db
 from trendradar.evaluation import (
     blind_round_detail,
+    calibration_summary,
     ensure_blind_round,
     freeze_candidate_run,
     submit_blind_round,
@@ -88,3 +89,32 @@ def test_blind_round_hides_system_ranking_until_submit():
     assert after["submitted"] is True
     assert after["hits"] == 3
     assert after["system_top3"] == system_top3
+
+
+
+def test_calibration_summary_tracks_human_and_system_disagreements():
+    conn = db()
+    seed_candidates(conn, 10)
+    run_id = freeze_candidate_run(conn, None, lookback_hours=72, max_items=20)
+    round_id = ensure_blind_round(conn, run_id)
+
+    run = conn.execute(
+        "SELECT system_top3_json FROM candidate_runs WHERE id=?",
+        (run_id,),
+    ).fetchone()
+    system_top3 = json.loads(run["system_top3_json"])
+    blind_ids = [
+        row["candidate_id"] for row in conn.execute(
+            "SELECT candidate_id FROM blind_items WHERE round_id=? ORDER BY position",
+            (round_id,),
+        ).fetchall()
+    ]
+    replacement = next(cid for cid in blind_ids if cid not in system_top3)
+    human = [system_top3[0], system_top3[1], replacement]
+    submit_blind_round(conn, round_id, human)
+
+    report = calibration_summary(conn)
+    assert report["rounds"] == 1
+    assert report["diagnostic_only"] is True
+    types = {item["type"] for item in report["disagreements"]}
+    assert types == {"HUMAN_ONLY","SYSTEM_ONLY"}
