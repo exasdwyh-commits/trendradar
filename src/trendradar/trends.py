@@ -152,6 +152,8 @@ def world_model_update(conn: sqlite3.Connection, days: int = 7) -> dict:
         WORLD_MODEL_SYSTEM,
         json.dumps(payload, ensure_ascii=False),
         timeout=90,
+        conn=conn,
+        task="world_model",
     )
     uid = uuid.uuid4().hex
     conn.execute(
