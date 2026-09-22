@@ -76,6 +76,24 @@ def analyze_pending(conn: sqlite3.Connection, limit: int = 12) -> dict:
             action = item.get("action", "TRACK")
             if action not in {"WRITE","TRACK","HOLD","SKIP"}:
                 action = "HOLD"
+            evidence_rows = conn.execute(
+                """
+                SELECT DISTINCT i.source_id,i.source_role
+                FROM cluster_items ci
+                JOIN intelligence i ON i.id=ci.intelligence_id
+                WHERE ci.cluster_id=?
+                """,
+                (by_id[cid]["cluster_id"],),
+            ).fetchall()
+            source_count = len({x["source_id"] for x in evidence_rows})
+            non_discovery = any(
+                x["source_role"] in {"PRIMARY","VERIFIER"} for x in evidence_rows
+            )
+            if action == "WRITE" and not (source_count >= 2 and non_discovery):
+                action = "TRACK"
+                gap = item.get("evidence_gap","")
+                suffix = "至少需要第二个独立来源完成交叉验证后才能进入 WRITE。"
+                item["evidence_gap"] = f"{gap} {suffix}".strip()
             conn.execute(
                 """
                 UPDATE candidates SET
