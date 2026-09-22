@@ -8,6 +8,7 @@ import uuid
 from pathlib import Path
 
 from .llm import chat_json, slot_enabled
+from .snapshot import freeze_publication_snapshot
 
 
 PLATFORM_RULES = {
@@ -322,6 +323,18 @@ def mark_variant_published(conn: sqlite3.Connection, variant_id: str, external_u
     row=conn.execute("SELECT * FROM platform_variants WHERE id=?",(variant_id,)).fetchone()
     if not row:
         raise KeyError("variant not found")
+
+    document=conn.execute("SELECT * FROM documents WHERE id=?",(row["document_id"],)).fetchone()
+    if not document:
+        raise KeyError("document not found")
+
+    # AI-generated editorial flows must pass Challenger before publication.
+    # A blank/manual document has no article_id and remains fully user-controlled.
+    if document["article_id"]:
+        article=conn.execute("SELECT status FROM articles WHERE id=?",(document["article_id"],)).fetchone()
+        if not article or article["status"]!="READY":
+            raise ValueError("article must pass Challenger before publication")
+
     existing=conn.execute("SELECT id FROM publications WHERE variant_id=?",(variant_id,)).fetchone()
     if existing:
         pid=existing["id"]
@@ -346,6 +359,13 @@ def mark_variant_published(conn: sqlite3.Connection, variant_id: str, external_u
         (variant_id,),
     )
     conn.commit()
+    freeze_publication_snapshot(
+        conn,
+        document_id=row["document_id"],
+        variant_id=variant_id,
+        publication_id=pid,
+        reason="PUBLISHED",
+    )
     return pid
 
 
