@@ -1,9 +1,10 @@
 from __future__ import annotations
 
 import json
+import sqlite3
 from pathlib import Path
 
-from fastapi import FastAPI, HTTPException
+from fastapi import Depends, FastAPI, HTTPException
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
@@ -73,8 +74,18 @@ def _json_fields(data: dict, fields: list[str]) -> dict:
 
 def create_app(root: str | Path | None = None) -> FastAPI:
     root = Path(root or Path.cwd())
-    conn = connect(root / "data" / "trendradar.db")
-    init_db(conn, root / "schema.sql")
+    db_path = root / "data" / "trendradar.db"
+    bootstrap = connect(db_path)
+    init_db(bootstrap, root / "schema.sql")
+    bootstrap.close()
+
+    def get_conn():
+        connection = connect(db_path)
+        try:
+            yield connection
+        finally:
+            connection.close()
+
     output_dir = root / "output"
     frontend_dist = root / "frontend" / "dist"
 
@@ -90,7 +101,7 @@ def create_app(root: str | Path | None = None) -> FastAPI:
         return FileResponse(index)
 
     @app.get("/api/health")
-    def health():
+    def health(conn: sqlite3.Connection = Depends(get_conn)):
         last = conn.execute("SELECT * FROM runs ORDER BY started_at DESC LIMIT 1").fetchone()
         return {
             "ok": True,
@@ -100,7 +111,7 @@ def create_app(root: str | Path | None = None) -> FastAPI:
         }
 
     @app.get("/api/dashboard")
-    def dashboard():
+    def dashboard(conn: sqlite3.Connection = Depends(get_conn)):
         pending = conn.execute(
             """
             SELECT t.*,c.title candidate_title
@@ -115,11 +126,11 @@ def create_app(root: str | Path | None = None) -> FastAPI:
         }
 
     @app.get("/api/today")
-    def get_today(limit: int = 3):
+    def get_today(limit: int = 3, conn: sqlite3.Connection = Depends(get_conn)):
         return {"items": today(conn, max(1, min(limit, 5)))}
 
     @app.get("/api/candidates")
-    def candidates(limit: int = 30):
+    def candidates(limit: int = 30, conn: sqlite3.Connection = Depends(get_conn)):
         rows = conn.execute(
             "SELECT * FROM candidates ORDER BY updated_at DESC,content_score DESC LIMIT ?",
             (max(1,min(limit,100)),),
@@ -127,7 +138,7 @@ def create_app(root: str | Path | None = None) -> FastAPI:
         return {"items": [dict(r) for r in rows]}
 
     @app.get("/api/candidates/{candidate_id}")
-    def candidate(candidate_id: str):
+    def candidate(candidate_id: str, conn: sqlite3.Connection = Depends(get_conn)):
         row = conn.execute("SELECT * FROM candidates WHERE id=?", (candidate_id,)).fetchone()
         if not row:
             raise HTTPException(404, "candidate not found")
@@ -141,14 +152,14 @@ def create_app(root: str | Path | None = None) -> FastAPI:
         return {"candidate": dict(row), "evidence": [dict(x) for x in evidence], "research": latest_research(conn,candidate_id)}
 
     @app.post("/api/candidates/{candidate_id}/research")
-    def start_research(candidate_id: str):
+    def start_research(candidate_id: str, conn: sqlite3.Connection = Depends(get_conn)):
         try:
             return {"ok":True,"research_id":research_candidate(conn,candidate_id)}
         except Exception as exc:
             raise HTTPException(400,str(exc)) from exc
 
     @app.post("/api/candidates/{candidate_id}/thesis")
-    def make_thesis(candidate_id: str):
+    def make_thesis(candidate_id: str, conn: sqlite3.Connection = Depends(get_conn)):
         try:
             tid=propose_thesis(conn,candidate_id)
             row=conn.execute("SELECT * FROM theses WHERE id=?",(tid,)).fetchone()
@@ -157,7 +168,7 @@ def create_app(root: str | Path | None = None) -> FastAPI:
             raise HTTPException(400,str(exc)) from exc
 
     @app.get("/api/theses")
-    def theses(status: str | None = None):
+    def theses(status: str | None = None, conn: sqlite3.Connection = Depends(get_conn)):
         if status:
             rows=conn.execute(
                 """
@@ -175,18 +186,18 @@ def create_app(root: str | Path | None = None) -> FastAPI:
         return {"items":[_json_fields(dict(r),["support_json","counter_json"]) for r in rows]}
 
     @app.post("/api/theses/{thesis_id}/confirm")
-    def confirm(thesis_id: str, body: ConfirmBody):
+    def confirm(thesis_id: str, body: ConfirmBody, conn: sqlite3.Connection = Depends(get_conn)):
         try:
             return {"ok":True,"ledger_id":confirm_thesis(conn,thesis_id,body.horizon)}
         except Exception as exc:
             raise HTTPException(400,str(exc)) from exc
 
     @app.post("/api/theses/{thesis_id}/hold")
-    def hold(thesis_id: str):
+    def hold(thesis_id: str, conn: sqlite3.Connection = Depends(get_conn)):
         hold_thesis(conn,thesis_id); return {"ok":True}
 
     @app.post("/api/theses/{thesis_id}/draft")
-    def draft(thesis_id: str):
+    def draft(thesis_id: str, conn: sqlite3.Connection = Depends(get_conn)):
         try:
             article_id,document_id=draft_article(conn,thesis_id)
             return {"ok":True,"article_id":article_id,"document_id":document_id}
@@ -194,7 +205,7 @@ def create_app(root: str | Path | None = None) -> FastAPI:
             raise HTTPException(400,str(exc)) from exc
 
     @app.get("/api/articles")
-    def articles():
+    def articles(conn: sqlite3.Connection = Depends(get_conn)):
         rows=conn.execute(
             """
             SELECT a.*,c.title candidate_title,t.thesis,d.id document_id
@@ -206,20 +217,20 @@ def create_app(root: str | Path | None = None) -> FastAPI:
         return {"items":[_json_fields(dict(r),["outline"]) for r in rows]}
 
     @app.get("/api/articles/{article_id}")
-    def article(article_id: str):
+    def article(article_id: str, conn: sqlite3.Connection = Depends(get_conn)):
         data=article_detail(conn,article_id)
         if not data: raise HTTPException(404,"article not found")
         return data
 
     @app.post("/api/articles/{article_id}/challenge")
-    def challenge(article_id: str):
+    def challenge(article_id: str, conn: sqlite3.Connection = Depends(get_conn)):
         try:
             return {"ok":True,"review_id":challenge_article(conn,article_id)}
         except Exception as exc:
             raise HTTPException(400,str(exc)) from exc
 
     @app.post("/api/articles/{article_id}/export/{format_name}")
-    def export_article(article_id: str, format_name: str):
+    def export_article(article_id: str, format_name: str, conn: sqlite3.Connection = Depends(get_conn)):
         try:
             if format_name=="md": path=export_markdown(conn,article_id,output_dir)
             elif format_name=="wechat": path=export_wechat_html(conn,article_id,output_dir)
@@ -229,21 +240,21 @@ def create_app(root: str | Path | None = None) -> FastAPI:
             raise HTTPException(400,str(exc)) from exc
 
     @app.get("/api/documents")
-    def documents():
+    def documents(conn: sqlite3.Connection = Depends(get_conn)):
         return {"items":list_documents(conn)}
 
     @app.post("/api/documents")
-    def create_document(body: DocumentCreateBody):
+    def create_document(body: DocumentCreateBody, conn: sqlite3.Connection = Depends(get_conn)):
         return {"ok":True,"document_id":create_blank_document(conn,body.title)}
 
     @app.get("/api/documents/{document_id}")
-    def document(document_id: str):
+    def document(document_id: str, conn: sqlite3.Connection = Depends(get_conn)):
         data=get_document(conn,document_id)
         if not data: raise HTTPException(404,"document not found")
         return data
 
     @app.put("/api/documents/{document_id}")
-    def update_document(document_id: str, body: DocumentSaveBody):
+    def update_document(document_id: str, body: DocumentSaveBody, conn: sqlite3.Connection = Depends(get_conn)):
         try:
             version=save_document(
                 conn,document_id,body.title,body.content_json,body.content_html,
@@ -254,14 +265,14 @@ def create_app(root: str | Path | None = None) -> FastAPI:
             raise HTTPException(400,str(exc)) from exc
 
     @app.post("/api/documents/{document_id}/restore/{version_number}")
-    def restore_document(document_id: str, version_number: int):
+    def restore_document(document_id: str, version_number: int, conn: sqlite3.Connection = Depends(get_conn)):
         try:
             return {"ok":True,"version":restore_version(conn,document_id,version_number)}
         except Exception as exc:
             raise HTTPException(400,str(exc)) from exc
 
     @app.post("/api/documents/{document_id}/edit-selection")
-    def document_edit_selection(document_id: str, body: SelectionEditBody):
+    def document_edit_selection(document_id: str, body: SelectionEditBody, conn: sqlite3.Connection = Depends(get_conn)):
         try:
             return {
                 "ok":True,
@@ -278,32 +289,32 @@ def create_app(root: str | Path | None = None) -> FastAPI:
             raise HTTPException(400,str(exc)) from exc
 
     @app.post("/api/documents/{document_id}/image-plan")
-    def image_plan(document_id: str):
+    def image_plan(document_id: str, conn: sqlite3.Connection = Depends(get_conn)):
         try:
             return {"ok":True,"items":create_image_plan(conn,document_id)}
         except Exception as exc:
             raise HTTPException(400,str(exc)) from exc
 
     @app.post("/api/documents/{document_id}/variant")
-    def platform_variant(document_id: str, body: PlatformVariantBody):
+    def platform_variant(document_id: str, body: PlatformVariantBody, conn: sqlite3.Connection = Depends(get_conn)):
         try:
             return {"ok":True,"variant_id":create_platform_variant(conn,document_id,body.platform)}
         except Exception as exc:
             raise HTTPException(400,str(exc)) from exc
 
     @app.get("/api/publish")
-    def publish_center():
+    def publish_center(conn: sqlite3.Connection = Depends(get_conn)):
         return {"items":list_publish_center(conn)}
 
     @app.post("/api/platform-variants/{variant_id}/published")
-    def mark_published(variant_id: str, body: PublishedBody):
+    def mark_published(variant_id: str, body: PublishedBody, conn: sqlite3.Connection = Depends(get_conn)):
         try:
             return {"ok":True,"publication_id":mark_variant_published(conn,variant_id,body.external_url)}
         except Exception as exc:
             raise HTTPException(400,str(exc)) from exc
 
     @app.post("/api/platform-variants/{variant_id}/export")
-    def export_platform_variant(variant_id: str):
+    def export_platform_variant(variant_id: str, conn: sqlite3.Connection = Depends(get_conn)):
         try:
             path=export_variant(conn,variant_id,output_dir/"platforms")
             return {"ok":True,"file":path.name,"url":f"/exports/platforms/{path.name}"}
@@ -311,7 +322,7 @@ def create_app(root: str | Path | None = None) -> FastAPI:
             raise HTTPException(400,str(exc)) from exc
 
     @app.get("/api/trends")
-    def trends():
+    def trends(conn: sqlite3.Connection = Depends(get_conn)):
         rows=conn.execute(
             """
             SELECT t.*,
@@ -325,7 +336,7 @@ def create_app(root: str | Path | None = None) -> FastAPI:
         return {"items":[dict(r) for r in rows],"world_model":latest_world_model_update(conn)}
 
     @app.get("/api/trends/{trend_id}")
-    def trend(trend_id: str):
+    def trend(trend_id: str, conn: sqlite3.Connection = Depends(get_conn)):
         row=conn.execute("SELECT * FROM trends WHERE id=?",(trend_id,)).fetchone()
         if not row: raise HTTPException(404,"trend not found")
         evidence=conn.execute("SELECT * FROM trend_evidence WHERE trend_id=? ORDER BY added_at DESC",(trend_id,)).fetchall()
@@ -333,7 +344,7 @@ def create_app(root: str | Path | None = None) -> FastAPI:
         return {"trend":dict(row),"evidence":[dict(x) for x in evidence],"revisions":[dict(x) for x in revisions]}
 
     @app.get("/api/ledger")
-    def ledger():
+    def ledger(conn: sqlite3.Connection = Depends(get_conn)):
         rows=conn.execute(
             """
             SELECT jl.*,t.name trend_name,th.thesis FROM judgement_ledger jl
@@ -344,7 +355,7 @@ def create_app(root: str | Path | None = None) -> FastAPI:
         return {"items":[dict(r) for r in rows]}
 
     @app.get("/api/intelligence")
-    def intelligence(limit: int = 80):
+    def intelligence(limit: int = 80, conn: sqlite3.Connection = Depends(get_conn)):
         rows=conn.execute(
             """
             SELECT i.*,s.name source_name FROM intelligence i JOIN sources s ON s.id=i.source_id
@@ -355,7 +366,7 @@ def create_app(root: str | Path | None = None) -> FastAPI:
 
 
     @app.get("/api/blind/latest")
-    def blind_latest():
+    def blind_latest(conn: sqlite3.Connection = Depends(get_conn)):
         return {
             "round": latest_blind_round(conn),
             "summary": evaluation_summary(conn),
@@ -363,7 +374,7 @@ def create_app(root: str | Path | None = None) -> FastAPI:
         }
 
     @app.post("/api/blind/{round_id}/submit")
-    def blind_submit(round_id: str, body: BlindSubmitBody):
+    def blind_submit(round_id: str, body: BlindSubmitBody, conn: sqlite3.Connection = Depends(get_conn)):
         try:
             return {
                 "round": submit_blind_round(conn, round_id, body.picks),
@@ -374,14 +385,14 @@ def create_app(root: str | Path | None = None) -> FastAPI:
             raise HTTPException(400, str(exc)) from exc
 
     @app.get("/api/evaluation")
-    def evaluation():
+    def evaluation(conn: sqlite3.Connection = Depends(get_conn)):
         return {
             "summary":evaluation_summary(conn),
             "calibration":calibration_summary(conn),
         }
 
     @app.get("/api/ai-runs")
-    def ai_runs(limit: int = 100):
+    def ai_runs(limit: int = 100, conn: sqlite3.Connection = Depends(get_conn)):
         rows = conn.execute(
             """
             SELECT * FROM ai_runs
@@ -408,7 +419,7 @@ def create_app(root: str | Path | None = None) -> FastAPI:
         return {"items":[dict(r) for r in rows],"aggregate":[dict(r) for r in aggregate]}
 
     @app.get("/api/source-yield")
-    def source_yield():
+    def source_yield(conn: sqlite3.Connection = Depends(get_conn)):
         rows = conn.execute(
             """
             SELECT s.id,s.name,s.role,s.tier,s.reliability,s.business_value,s.noise,s.accuracy,
@@ -435,7 +446,7 @@ def create_app(root: str | Path | None = None) -> FastAPI:
         return {"items":items}
 
     @app.get("/api/sources")
-    def sources():
+    def sources(conn: sqlite3.Connection = Depends(get_conn)):
         rows=conn.execute(
             """
             SELECT s.*,h.last_attempt_at,h.last_success_at,h.last_error,
