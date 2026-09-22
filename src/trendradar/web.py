@@ -392,6 +392,7 @@ def create_app(root: str | Path | None = None) -> FastAPI:
               SUM(ok) ok_calls,
               SUM(input_tokens) input_tokens,
               SUM(output_tokens) output_tokens,
+              ROUND(SUM(cost),6) cost_cny,
               SUM(retries) retries,
               ROUND(AVG(duration_ms),1) avg_duration_ms
             FROM ai_runs
