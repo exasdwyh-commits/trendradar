@@ -16,9 +16,22 @@ export function Trends(){
 
 export function Ledger(){
   const [items,setItems]=useState<any[]>([])
-  useEffect(()=>{api.get<{items:any[]}>('/api/ledger').then(x=>setItems(x.items))},[])
+  const [tab,setTab]=useState<'pending'|'upcoming'|'reviewed'>('pending')
+  const load=()=>api.get<{items:any[]}>('/api/ledger').then(x=>setItems(x.items))
+  useEffect(()=>{void load()},[])
+  const review=async(id:string,result:string)=>{await api.post('/api/ledger/'+id+'/review',{result});await load()}
+  const filtered=items.filter(x=>{
+    if(tab==='reviewed')return x.review_status==='REVIEWED'
+    if(tab==='upcoming')return x.review_status==='UPCOMING'
+    return x.review_status==='PENDING'||x.review_status==='DUE'
+  })
   return <>
     <Header title="判断账本" sub="爆款不等于判断正确。这里记录你当时为什么这么想，以及未来如何验证。"/>
-    {!items.length?<Empty>还没有被确认的长期判断。</Empty>:<div className="ledger">{items.map(x=><article key={x.id} className="ledger-row"><div className="ledger-time">{x.created_at?.slice(0,10)}</div><div><div className="micro-row"><Pill tone={x.reviewed_at?'green':'amber'}>{x.reviewed_at?'已复盘':'待验证'}</Pill><Pill>{x.horizon}</Pill></div><h3>{x.judgement}</h3><p>若判断错误：{x.falsification_signal||'待补充验证条件'}</p></div></article>)}</div>}
+    <div className="ledger-tabs">
+      <button className={tab==='pending'?'active':''} onClick={()=>setTab('pending')}>待验证</button>
+      <button className={tab==='upcoming'?'active':''} onClick={()=>setTab('upcoming')}>即将到期</button>
+      <button className={tab==='reviewed'?'active':''} onClick={()=>setTab('reviewed')}>已复盘</button>
+    </div>
+    {!filtered.length?<Empty>这个分组暂时没有判断。</Empty>:<div className="ledger">{filtered.map(x=><article key={x.id} className="ledger-row"><div className="ledger-time"><span>{x.created_at?.slice(0,10)}</span>{x.review_at&&<small>复盘 {x.review_at.slice(0,10)}</small>}</div><div><div className="micro-row"><Pill tone={x.review_status==='REVIEWED'?'green':x.review_status==='DUE'?'red':x.review_status==='UPCOMING'?'amber':'neutral'}>{x.review_status==='REVIEWED'?'已复盘':x.review_status==='DUE'?'已到期':x.review_status==='UPCOMING'?'即将到期':'待验证'}</Pill><Pill>{x.horizon}</Pill>{x.result&&<Pill tone="blue">{x.result}</Pill>}</div><h3>{x.judgement}</h3><p>若判断错误：{x.falsification_signal||'待补充验证条件'}</p>{x.review_status!=='REVIEWED'&&<div className="ledger-review"><span>现在复盘：</span><button onClick={()=>void review(x.id,'CORRECT')}>正确</button><button onClick={()=>void review(x.id,'DIRECTIONALLY_RIGHT')}>大方向正确</button><button onClick={()=>void review(x.id,'PARTIAL')}>部分成立</button><button onClick={()=>void review(x.id,'WRONG')}>错误</button></div>}</div></article>)}</div>}
   </>
 }
