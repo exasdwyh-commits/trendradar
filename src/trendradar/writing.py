@@ -64,6 +64,41 @@ def _grounding_summary(items_by_kind: dict[str, list[dict]]) -> dict:
     }
 
 
+def _grounding_sources(
+    conn: sqlite3.Connection,
+    items_by_kind: dict[str, list[dict]],
+) -> dict:
+    evidence_ids: set[str] = set()
+    for kind in ("FACT","CLAIM"):
+        for item in items_by_kind.get(kind,[]):
+            evidence_ids.update(str(x) for x in (item.get("evidence_ids") or []))
+    if not evidence_ids:
+        return {
+            "independent_source_count":0,
+            "quality_source_count":0,
+            "source_ids":[],
+        }
+    placeholders=",".join("?" for _ in evidence_ids)
+    rows=conn.execute(
+        f"""
+        SELECT DISTINCT source_id,source_role
+        FROM intelligence
+        WHERE id IN ({placeholders})
+        """,
+        tuple(sorted(evidence_ids)),
+    ).fetchall()
+    source_ids=sorted({row["source_id"] for row in rows})
+    quality_source_ids=sorted({
+        row["source_id"] for row in rows
+        if row["source_role"] in {"PRIMARY","VERIFIER"}
+    })
+    return {
+        "independent_source_count":len(source_ids),
+        "quality_source_count":len(quality_source_ids),
+        "source_ids":source_ids,
+    }
+
+
 def _persist_research_items(
     conn: sqlite3.Connection,
     research_id: str,
@@ -123,7 +158,10 @@ def latest_research(conn: sqlite3.Connection, candidate_id: str) -> dict | None:
         "CLAIM": data.get("claims") or [],
         "INFER": data.get("inferences") or [],
     }
-    data["grounding"] = _grounding_summary(items_by_kind)
+    data["grounding"] = {
+        **_grounding_summary(items_by_kind),
+        **_grounding_sources(conn,items_by_kind),
+    }
     return data
 
 
@@ -151,8 +189,12 @@ def research_candidate(conn: sqlite3.Connection, candidate_id: str) -> str:
     kept_grounded = len(items_by_kind["FACT"]) + len(items_by_kind["CLAIM"])
     if raw_grounded > kept_grounded:
         dropped_note = "研究模型返回了无法追溯到输入 evidence id 的事实/主张，系统已自动丢弃。"
+    source_grounding = _grounding_sources(conn,items_by_kind)
     if grounding["evidence_count"] < 2:
-        insuff = "当前研究包尚未形成两个独立 evidence id 的交叉支撑。"
+        insuff = "当前研究包尚未形成两个可追溯 evidence id。"
+        dropped_note = f"{dropped_note} {insuff}".strip()
+    if source_grounding["independent_source_count"] < 2:
+        insuff = "当前研究包尚未形成两个独立来源的交叉支撑。"
         dropped_note = f"{dropped_note} {insuff}".strip()
     evidence_gap = f"{evidence_gap} {dropped_note}".strip()
 
@@ -182,8 +224,14 @@ def propose_thesis(conn: sqlite3.Connection, candidate_id: str) -> str:
     if not research:
         raise ValueError("research is required before thesis")
     grounding = research.get("grounding") or {}
-    if int(grounding.get("grounded_units") or 0) < 2 or int(grounding.get("evidence_count") or 0) < 2:
-        raise ValueError("research requires at least 2 grounded units from 2 evidence items before thesis")
+    if int(grounding.get("grounded_units") or 0) < 2:
+        raise ValueError("research requires at least 2 grounded units before thesis")
+    if int(grounding.get("evidence_count") or 0) < 2:
+        raise ValueError("research requires at least 2 evidence items before thesis")
+    if int(grounding.get("independent_source_count") or 0) < 2:
+        raise ValueError("research requires at least 2 independent sources before thesis")
+    if int(grounding.get("quality_source_count") or 0) < 1:
+        raise ValueError("research requires PRIMARY or VERIFIER evidence before thesis")
     material = candidate_material(conn, candidate_id)
     data, model = chat_json(
         "RESEARCH_MODEL",
