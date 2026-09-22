@@ -31,6 +31,8 @@ class Source:
     business_value: int = 65
     noise: int = 30
     accuracy: int = 70
+    window_days: int | None = None
+    scan_limit: int | None = None
     max_per_round: int | None = None
     enabled: bool = True
     note: str | None = None
@@ -60,6 +62,12 @@ def load_sources(path: str | Path) -> list[Source]:
         max_per_round = row.get("max_per_round")
         if max_per_round is not None:
             max_per_round = _bounded_int(max_per_round, 18, 1, 100)
+        window_days = row.get("window_days")
+        if window_days is not None:
+            window_days = _bounded_int(window_days, 7, 1, 365)
+        scan_limit = row.get("scan_limit")
+        if scan_limit is not None:
+            scan_limit = _bounded_int(scan_limit, 80, 1, 500)
 
         source = Source(
             id=str(row["id"]),
@@ -80,6 +88,8 @@ def load_sources(path: str | Path) -> list[Source]:
             accuracy=_bounded_int(
                 row.get("accuracy"), DEFAULT_ACCURACY.get(role, 70)
             ),
+            window_days=window_days,
+            scan_limit=scan_limit,
             max_per_round=max_per_round,
             enabled=bool(row.get("enabled", True)),
             note=row.get("note"),
