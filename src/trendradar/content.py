@@ -231,7 +231,10 @@ def create_image_plan(conn: sqlite3.Connection, document_id: str) -> list[dict]:
         "thesis":doc.get("thesis"),
         "body":doc["current"].get("plain_text",""),
     }
-    data,model = chat_json("WRITING_MODEL",IMAGE_PLAN_SYSTEM,json.dumps(payload,ensure_ascii=False))
+    data,model = chat_json(
+        "WRITING_MODEL", IMAGE_PLAN_SYSTEM, json.dumps(payload,ensure_ascii=False),
+        conn=conn, task="image_plan"
+    )
     created=[]
     for item in data.get("items",[])[:5]:
         asset_type=(item.get("type") or "DIAGRAM").upper()
@@ -272,7 +275,10 @@ def create_platform_variant(conn: sqlite3.Connection, document_id: str, platform
         "thesis":doc.get("thesis"),
         "master_text":doc["current"].get("plain_text",""),
     }
-    data,model=chat_json("WRITING_MODEL",PLATFORM_SYSTEM,json.dumps(payload,ensure_ascii=False))
+    data,model=chat_json(
+        "WRITING_MODEL", PLATFORM_SYSTEM, json.dumps(payload,ensure_ascii=False),
+        conn=conn, task=f"platform_variant:{platform.lower()}"
+    )
     vid=uuid.uuid4().hex
     text=data.get("content_text","")
     html_content=data.get("content_html") or _plain_to_html(text)
