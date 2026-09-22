@@ -23,15 +23,17 @@ sources:
     name: OpenAI News
     lane: AI_COMMERCIALIZATION
     role: PRIMARY
-    type: html
-    url: https://openai.com/news/
-    include: "/index/|/news/|/business/"
+    type: rss
+    url: https://openai.com/news/rss.xml
     tier: 1
-    reliability: 88
-    business_value: 82
-    noise: 18
-    accuracy: 86
+    reliability: 92
+    business_value: 78
+    noise: 10
+    accuracy: 90
+    window_days: 30
+    scan_limit: 80
     max_per_round: 12
+    note: "沿用 intel-workbench 已实测的官方 RSS；先扫30天窗口再应用单轮额度。"
 
   - id: anthropic-news
     name: Anthropic News
@@ -87,6 +89,8 @@ sources:
     noise: 24
     accuracy: 84
     max_per_round: 10
+    enabled: false
+    note: "GitHub Runner 与本地 intel-workbench 均实测 403；保留登记，等待专用 adapter，不再让通用采集器重复撞墙。"
 
   - id: meta-ai
     name: Meta AI
@@ -184,6 +188,8 @@ sources:
     noise: 12
     accuracy: 92
     max_per_round: 14
+    enabled: false
+    note: "GitHub Runner 实测 401，且本地 intel-workbench 记录为不可达；暂停直抓，使用可达高质量财经源补位。"
 
   - id: reuters-technology
     name: Reuters Technology
@@ -198,6 +204,8 @@ sources:
     noise: 14
     accuracy: 92
     max_per_round: 12
+    enabled: false
+    note: "GitHub Runner 实测 401，且本地 intel-workbench 记录为不可达；暂停直抓，使用可达高质量财经源补位。"
 
   - id: financial-times
     name: Financial Times
@@ -212,6 +220,8 @@ sources:
     noise: 12
     accuracy: 90
     max_per_round: 12
+    enabled: false
+    note: "GitHub Runner 实测 403，且本地 intel-workbench 记录为不可达；暂停直抓，使用 Sifted/Fortune 等可达源补位。"
 
   - id: techcrunch
     name: TechCrunch
@@ -252,6 +262,86 @@ sources:
     accuracy: 74
     max_per_round: 6
 
+
+  - id: fortune
+    name: Fortune
+    lane: COMPANY
+    role: VERIFIER
+    type: rss
+    url: https://fortune.com/feed/
+    tier: 2
+    reliability: 84
+    business_value: 80
+    noise: 30
+    accuracy: 84
+    window_days: 3
+    scan_limit: 60
+    max_per_round: 6
+    note: "intel-workbench 本地实测可达；补足全球公司与高管层面的商业变化。"
+
+  - id: marketwatch
+    name: MarketWatch
+    lane: COMPANY
+    role: VERIFIER
+    type: rss
+    url: https://feeds.content.dowjones.io/public/rss/mw_topstories
+    tier: 3
+    reliability: 82
+    business_value: 78
+    noise: 34
+    accuracy: 82
+    window_days: 3
+    scan_limit: 60
+    max_per_round: 6
+    note: "用于观察市场反应与投资者预期，不单独支撑结构性结论。"
+
+  - id: cnbc-top
+    name: CNBC · Top News
+    lane: COMPANY
+    role: VERIFIER
+    type: rss
+    url: https://www.cnbc.com/id/100003114/device/rss/rss.html
+    tier: 3
+    reliability: 82
+    business_value: 78
+    noise: 32
+    accuracy: 82
+    window_days: 3
+    scan_limit: 60
+    max_per_round: 6
+
+  - id: nber
+    name: NBER
+    lane: BUSINESS_MODEL
+    role: VERIFIER
+    type: rss
+    url: https://www.nber.org/rss/new.xml
+    tier: 1
+    reliability: 94
+    business_value: 78
+    noise: 10
+    accuracy: 92
+    window_days: 30
+    scan_limit: 40
+    max_per_round: 10
+    note: "量化研究证据层；用于生产率、劳动、AI收益分配与商业机制的长期验证。"
+
+  - id: rand
+    name: RAND
+    lane: INDUSTRY
+    role: VERIFIER
+    type: rss
+    url: https://www.rand.org/news.xml
+    tier: 2
+    reliability: 90
+    business_value: 74
+    noise: 16
+    accuracy: 88
+    window_days: 30
+    scan_limit: 25
+    max_per_round: 8
+    note: "技术政策、产业战略与长期结构变化的研究验证源。"
+
   # ===== 产业 / 能源 / 制造 =====
   - id: nvidia-blog
     name: NVIDIA Blog
@@ -280,6 +370,8 @@ sources:
     noise: 10
     accuracy: 94
     max_per_round: 8
+    enabled: false
+    note: "GitHub Runner 实测 403；等待专用 feed/API adapter，避免每天制造失败噪声。"
 
   - id: semiconductor-industry-association
     name: Semiconductor Industry Association
@@ -294,6 +386,8 @@ sources:
     noise: 20
     accuracy: 84
     max_per_round: 8
+    enabled: false
+    note: "GitHub Runner 实测 403；等待专用 feed/adapter，避免通用 HTML 抓取反复失败。"
 
   - id: ifr
     name: International Federation of Robotics
