@@ -324,8 +324,9 @@ sources:
     window_days: 30
     scan_limit: 40
     max_per_round: 10
-    note: "量化研究证据层；用于生产率、劳动、AI收益分配与商业机制的长期验证。"
+    note: "GitHub Runner 实测 403；保留为研究层候选源，后续用专用 adapter/on-demand 方式接入，不进入每日主采集。"
 
+    enabled: false
   - id: rand
     name: RAND
     lane: INDUSTRY
@@ -340,9 +341,10 @@ sources:
     window_days: 30
     scan_limit: 25
     max_per_round: 8
-    note: "技术政策、产业战略与长期结构变化的研究验证源。"
+    note: "GitHub Runner 实测 403；保留为研究层候选源，后续用专用 adapter/on-demand 方式接入，不进入每日主采集。"
 
   # ===== 产业 / 能源 / 制造 =====
+    enabled: false
   - id: nvidia-blog
     name: NVIDIA Blog
     lane: INDUSTRY
@@ -703,6 +705,8 @@ sources:
     accuracy: 52
     max_per_round: 8
 
+    enabled: false
+    note: "GitHub Runner 并发采集实测 429，且噪声较高；日常关闭，保留 Hacker News 与 Reddit startups 作为 Discovery。"
   - id: reddit-localllama
     name: Reddit LocalLLaMA
     lane: AI_COMMERCIALIZATION
@@ -715,3 +719,6 @@ sources:
     noise: 70
     accuracy: 54
     max_per_round: 8
+
+    enabled: false
+    note: "GitHub Runner 并发采集实测 429，且与核心商业内容重合度有限；日常关闭，需要时做专题发现。"
