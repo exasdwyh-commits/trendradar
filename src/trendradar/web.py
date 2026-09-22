@@ -65,7 +65,6 @@ def create_app(root: str | Path | None = None) -> FastAPI:
     init_db(conn, root / "schema.sql")
     output_dir = root / "output"
     frontend_dist = root / "frontend" / "dist"
-    legacy_index = root / "web" / "index.html"
 
     app = FastAPI(title="TrendRadar Business", version="3.1.0")
     if (frontend_dist / "assets").exists():
@@ -74,9 +73,9 @@ def create_app(root: str | Path | None = None) -> FastAPI:
     @app.get("/")
     def home():
         index = frontend_dist / "index.html"
-        if index.exists():
-            return FileResponse(index)
-        return FileResponse(legacy_index)
+        if not index.exists():
+            raise HTTPException(503, "frontend build missing: run cd frontend && npm install && npm run build")
+        return FileResponse(index)
 
     @app.get("/api/health")
     def health():
@@ -343,7 +342,8 @@ def create_app(root: str | Path | None = None) -> FastAPI:
     @app.get("/{full_path:path}")
     def spa(full_path: str):
         index=frontend_dist/"index.html"
-        if index.exists(): return FileResponse(index)
-        return FileResponse(legacy_index)
+        if not index.exists():
+            raise HTTPException(503, "frontend build missing: run cd frontend && npm install && npm run build")
+        return FileResponse(index)
 
     return app
