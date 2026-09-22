@@ -455,11 +455,23 @@ def run_daily(
         candidate_count = upsert_candidates(conn)
         fast_rank = refine_candidates(conn, limit=fast_limit)
         cognition = analyze_pending(conn, limit=cognition_limit)
+        fast_effective = bool(fast_rank.get("processed")) and not fast_rank.get("degraded")
+        cognition_effective = bool(cognition.get("processed")) and not cognition.get("degraded")
+        ranking_mode = "COGNITION" if cognition_effective else "FAST" if fast_effective else "RULE"
         candidate_run_id = freeze_candidate_run(
             conn,
             run_id,
             lookback_hours=lookback_hours,
             max_items=candidate_snapshot_limit,
+            ranking_mode=ranking_mode,
+            ranking_meta={
+                "fast_enabled":bool(fast_rank.get("enabled")),
+                "fast_processed":int(fast_rank.get("processed") or 0),
+                "fast_model":fast_rank.get("model"),
+                "cognition_enabled":bool(cognition.get("enabled")),
+                "cognition_processed":int(cognition.get("processed") or 0),
+                "cognition_model":cognition.get("model"),
+            },
         )
         blind_round_id = ensure_blind_round(conn, candidate_run_id)
         world_model = world_model_update(conn)
@@ -471,6 +483,7 @@ def run_daily(
             "fast_rank": fast_rank,
             "cognition": cognition,
             "candidate_run_id": candidate_run_id,
+            "ranking_mode": ranking_mode,
             "blind_round_id": blind_round_id,
             "world_model": world_model,
             "daily_brief": str(brief_path),
