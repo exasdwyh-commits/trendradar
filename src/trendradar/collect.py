@@ -3,6 +3,7 @@ from __future__ import annotations
 import hashlib
 import json
 import re
+import time
 from dataclasses import dataclass
 from datetime import datetime, timedelta, timezone
 from email.utils import parsedate_to_datetime
@@ -133,8 +134,42 @@ def make_item(
     )
 
 
-def collect_rss(source: Source, limit: int = 18) -> list[Item]:
-    parsed = feedparser.parse(source.url)
+def _get_with_retry(
+    client: httpx.Client,
+    url: str,
+    *,
+    attempts: int = 2,
+) -> httpx.Response:
+    last: Exception | None = None
+    for attempt in range(1, max(1, attempts) + 1):
+        try:
+            response = client.get(url, follow_redirects=True)
+            if response.status_code == 429 or response.status_code >= 500:
+                if attempt < attempts:
+                    retry_after = response.headers.get("Retry-After")
+                    try:
+                        wait = float(retry_after) if retry_after else float(attempt)
+                    except ValueError:
+                        wait = float(attempt)
+                    time.sleep(min(5.0, max(0.0, wait)))
+                    continue
+            response.raise_for_status()
+            return response
+        except (httpx.TransportError, httpx.HTTPStatusError) as exc:
+            last = exc
+            status = getattr(getattr(exc, "response", None), "status_code", None)
+            transient = isinstance(exc, httpx.TransportError) or status == 429 or (
+                status is not None and status >= 500
+            )
+            if not transient or attempt >= attempts:
+                raise
+            time.sleep(min(5.0, float(attempt)))
+    raise RuntimeError(str(last or "fetch failed"))
+
+
+def collect_rss(source: Source, client: httpx.Client, limit: int = 18) -> list[Item]:
+    response = _get_with_retry(client, source.url)
+    parsed = feedparser.parse(response.content)
     scan_limit = source.scan_limit or max(limit, 80 if source.window_days else limit)
     cutoff = None
     if source.window_days:
@@ -267,8 +302,7 @@ def collect_html(
     limit: int = 18,
     enrich_limit: int = 6,
 ) -> list[Item]:
-    response = client.get(source.url, follow_redirects=True)
-    response.raise_for_status()
+    response = _get_with_retry(client, source.url)
     discovery_limit = source.scan_limit or max(limit, enrich_limit)
     links = _discover_links(source, response.text, discovery_limit)
     cutoff = (
@@ -280,8 +314,7 @@ def collect_html(
         title,summary,content,published = fallback_title,"","",None
         if index < enrich_limit:
             try:
-                page = client.get(url, follow_redirects=True)
-                page.raise_for_status()
+                page = _get_with_retry(client, url)
                 title,summary,content,published = extract_article(page.text, fallback_title)
             except Exception:
                 pass
@@ -302,11 +335,11 @@ def collect_source(
     limit: int = 18,
     enrich_limit: int = 6,
 ) -> list[Item]:
-    if source.type == "rss":
-        return collect_rss(source, limit)
     headers = {
         "User-Agent": "TrendRadar-Business/3.0 (+personal research)",
         "Accept-Language": "en-US,en;q=0.8,zh-CN;q=0.6",
     }
     with httpx.Client(timeout=timeout, headers=headers) as client:
+        if source.type == "rss":
+            return collect_rss(source, client, limit)
         return collect_html(source, client, limit, enrich_limit)
