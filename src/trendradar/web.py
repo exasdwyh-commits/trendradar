@@ -14,7 +14,7 @@ from .content import (
     mark_variant_published, restore_version, save_document,
 )
 from .db import connect, init_db
-from .evaluation import evaluation_summary, latest_blind_round, submit_blind_round
+from .evaluation import calibration_summary, evaluation_summary, latest_blind_round, submit_blind_round
 from .exporter import export_markdown, export_wechat_html
 from .llm import slot_status
 from .pipeline import today
@@ -351,7 +351,11 @@ def create_app(root: str | Path | None = None) -> FastAPI:
 
     @app.get("/api/blind/latest")
     def blind_latest():
-        return {"round": latest_blind_round(conn), "summary": evaluation_summary(conn)}
+        return {
+            "round": latest_blind_round(conn),
+            "summary": evaluation_summary(conn),
+            "calibration": calibration_summary(conn),
+        }
 
     @app.post("/api/blind/{round_id}/submit")
     def blind_submit(round_id: str, body: BlindSubmitBody):
@@ -365,7 +369,10 @@ def create_app(root: str | Path | None = None) -> FastAPI:
 
     @app.get("/api/evaluation")
     def evaluation():
-        return evaluation_summary(conn)
+        return {
+            "summary":evaluation_summary(conn),
+            "calibration":calibration_summary(conn),
+        }
 
     @app.get("/api/ai-runs")
     def ai_runs(limit: int = 100):
