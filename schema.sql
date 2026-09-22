@@ -329,9 +329,35 @@ CREATE TABLE IF NOT EXISTS ai_runs (
 CREATE INDEX IF NOT EXISTS idx_ai_runs_time ON ai_runs(run_at DESC);
 CREATE INDEX IF NOT EXISTS idx_ai_runs_slot ON ai_runs(slot, run_at DESC);
 
+
+-- Freeze each daily candidate pool so historical selection quality is reproducible.
+CREATE TABLE IF NOT EXISTS candidate_runs (
+  id TEXT PRIMARY KEY,
+  pipeline_run_id TEXT REFERENCES runs(id) ON DELETE SET NULL,
+  status TEXT NOT NULL DEFAULT 'FROZEN',
+  system_top3_json TEXT NOT NULL DEFAULT '[]',
+  settings_json TEXT NOT NULL DEFAULT '{}',
+  created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE IF NOT EXISTS candidate_run_items (
+  run_id TEXT NOT NULL REFERENCES candidate_runs(id) ON DELETE CASCADE,
+  candidate_id TEXT NOT NULL REFERENCES candidates(id) ON DELETE CASCADE,
+  content_rank INTEGER,
+  cognition_rank INTEGER,
+  content_score REAL NOT NULL,
+  cognition_score REAL NOT NULL,
+  action TEXT NOT NULL,
+  snapshot_json TEXT NOT NULL,
+  PRIMARY KEY(run_id, candidate_id)
+);
+CREATE INDEX IF NOT EXISTS idx_candidate_run_content ON candidate_run_items(run_id, content_rank);
+CREATE INDEX IF NOT EXISTS idx_candidate_run_cognition ON candidate_run_items(run_id, cognition_rank);
+
 -- Blind 10→3 evaluation: human choices are compared with the system only after submit.
 CREATE TABLE IF NOT EXISTS blind_rounds (
   id TEXT PRIMARY KEY,
+  candidate_run_id TEXT REFERENCES candidate_runs(id) ON DELETE SET NULL,
   round_date TEXT NOT NULL UNIQUE,
   system_top3_json TEXT NOT NULL,
   human_picks_json TEXT,
