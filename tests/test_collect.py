@@ -1,4 +1,4 @@
-from trendradar.collect import canonicalize_url, extract_article, parse_datetime
+from trendradar.collect import canonicalize_url, extract_article, parse_datetime, parse_url_date
 
 
 def test_canonical_url_drops_tracking():
@@ -25,3 +25,13 @@ def test_extract_article_metadata():
 
 def test_parse_datetime_invalid_is_none():
     assert parse_datetime("not-a-date") is None
+
+
+
+def test_parse_url_date_for_chinese_official_patterns():
+    assert parse_url_date("https://www.stats.gov.cn/sj/zxfb/202609/t20260915_1965307.html").date().isoformat() == "2026-09-15"
+    assert parse_url_date("https://international.caixin.com/2026-09-20/102486821.html").date().isoformat() == "2026-09-20"
+
+
+def test_parse_url_date_invalid_is_none():
+    assert parse_url_date("https://example.com/no-date") is None
