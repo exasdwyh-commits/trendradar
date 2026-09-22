@@ -54,6 +54,7 @@ def main() -> None:
             cognition_limit=int(ranking.get("cognition_pool_size",12)),
             candidate_snapshot_limit=int(ranking.get("candidate_snapshot_size",20)),
             lookback_hours=int(cfg.get("lookback_hours",72)),
+            collection_workers=int(cfg.get("max_workers",6)),
         )
 
     if args.command == "init":
