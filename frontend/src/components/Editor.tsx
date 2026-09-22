@@ -55,6 +55,8 @@ function MediaList({items, onGenerate}:{items:MediaAsset[];onGenerate:()=>Promis
           <strong>{item.title}</strong>
           <p>{item.brief}</p>
           {item.placement && <small>位置：{item.placement}</small>}
+          {!!item.evidence_ids?.length&&<small>依据：{item.evidence_ids.join(' / ')}</small>}
+          {item.source_url&&<a className="asset-source" href={item.source_url} target="_blank" rel="noreferrer">查看原始来源</a>}
           {item.prompt && <details><summary>生成提示词</summary><p className="prompt">{item.prompt}</p></details>}
         </div>
       )}</div>
