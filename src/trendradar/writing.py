@@ -6,6 +6,7 @@ import uuid
 
 from .content import ensure_document_for_article
 from .grounding import assert_no_new_numeric_claims
+from .judgement import horizon_to_review_at
 from .llm import chat_json
 from .prompts import CRITIC_SYSTEM, RESEARCH_SYSTEM, THESIS_SYSTEM, WRITER_SYSTEM
 
@@ -277,10 +278,14 @@ def confirm_thesis(conn: sqlite3.Connection, thesis_id: str, horizon: str = "12ä
         ledger_id = uuid.uuid4().hex
         conn.execute(
             """
-            INSERT INTO judgement_ledger(id,thesis_id,judgement,horizon,falsification_signal)
-            VALUES(?,?,?,?,?)
+            INSERT INTO judgement_ledger(
+              id,thesis_id,judgement,horizon,falsification_signal,review_at
+            ) VALUES(?,?,?,?,?,?)
             """,
-            (ledger_id,thesis_id,thesis["thesis"],horizon,thesis["falsification_signal"]),
+            (
+                ledger_id,thesis_id,thesis["thesis"],horizon,
+                thesis["falsification_signal"],horizon_to_review_at(horizon),
+            ),
         )
     conn.commit()
     return ledger_id
