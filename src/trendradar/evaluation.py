@@ -28,9 +28,13 @@ def _recent_candidate_rows(
 
 
 def _snapshot_candidate(conn: sqlite3.Connection, row: sqlite3.Row) -> dict:
+    cluster = conn.execute(
+        "SELECT lane FROM story_clusters WHERE id=?",
+        (row["cluster_id"],),
+    ).fetchone()
     evidence = conn.execute(
         """
-        SELECT i.id,i.title,i.url,i.summary,i.kind,i.source_role,i.source_id,i.published_at,
+        SELECT i.id,i.title,i.url,i.summary,i.kind,i.source_role,i.source_id,i.lane,i.published_at,
                i.evidence_score,i.commercial_score
         FROM cluster_items ci
         JOIN intelligence i ON i.id=ci.intelligence_id
@@ -42,6 +46,7 @@ def _snapshot_candidate(conn: sqlite3.Connection, row: sqlite3.Row) -> dict:
     ).fetchall()
     return {
         "candidate": dict(row),
+        "lane": cluster["lane"] if cluster else None,
         "evidence": [dict(x) for x in evidence],
     }
 
@@ -299,4 +304,90 @@ def evaluation_summary(conn: sqlite3.Connection, recent: int = 14) -> dict:
         "possible":possible,
         "hit_rate":round(hits/possible,4) if possible else None,
         "recent":rounds,
+    }
+
+
+def calibration_summary(conn: sqlite3.Connection, recent: int = 14) -> dict:
+    rounds = conn.execute(
+        """
+        SELECT * FROM blind_rounds
+        WHERE submitted_at IS NOT NULL
+        ORDER BY round_date DESC
+        LIMIT ?
+        """,
+        (max(1,recent),),
+    ).fetchall()
+    lane_stats: dict[str, dict] = {}
+    source_stats: dict[str, dict] = {}
+    disagreements: list[dict] = []
+
+    def bump(bucket: dict[str, dict], key: str, human: bool, system: bool) -> None:
+        item = bucket.setdefault(
+            key,
+            {"key":key,"human":0,"system":0,"overlap":0,"human_only":0,"system_only":0},
+        )
+        if human:
+            item["human"] += 1
+        if system:
+            item["system"] += 1
+        if human and system:
+            item["overlap"] += 1
+        elif human:
+            item["human_only"] += 1
+        elif system:
+            item["system_only"] += 1
+
+    for round_row in rounds:
+        human = set(json.loads(round_row["human_picks_json"] or "[]"))
+        system = set(json.loads(round_row["system_top3_json"] or "[]"))
+        snapshots = conn.execute(
+            """
+            SELECT candidate_id,snapshot_json
+            FROM candidate_run_items
+            WHERE run_id=?
+            """,
+            (round_row["candidate_run_id"],),
+        ).fetchall()
+        by_id = {r["candidate_id"]:json.loads(r["snapshot_json"]) for r in snapshots}
+
+        for candidate_id in human | system:
+            snapshot = by_id.get(candidate_id) or {}
+            candidate = snapshot.get("candidate") or {}
+            evidence = snapshot.get("evidence") or []
+            lane = snapshot.get("lane") or (evidence[0].get("lane") if evidence else None) or "UNKNOWN"
+            source_ids = sorted({
+                str(item.get("source_id")) for item in evidence if item.get("source_id")
+            })
+            in_human = candidate_id in human
+            in_system = candidate_id in system
+            bump(lane_stats,lane,in_human,in_system)
+            for source_id in source_ids:
+                bump(source_stats,source_id,in_human,in_system)
+
+            if in_human != in_system and len(disagreements) < 12:
+                disagreements.append({
+                    "round_date":round_row["round_date"],
+                    "type":"HUMAN_ONLY" if in_human else "SYSTEM_ONLY",
+                    "candidate_id":candidate_id,
+                    "title":candidate.get("title",""),
+                    "lane":lane,
+                    "source_ids":source_ids,
+                    "content_score":candidate.get("content_score"),
+                    "cognition_score":candidate.get("cognition_score"),
+                })
+
+    lanes = sorted(
+        lane_stats.values(),
+        key=lambda x: (-(x["human"]+x["system"]),x["key"]),
+    )
+    sources = sorted(
+        source_stats.values(),
+        key=lambda x: (-(x["human"]+x["system"]),x["key"]),
+    )[:15]
+    return {
+        "rounds":len(rounds),
+        "lanes":lanes,
+        "sources":sources,
+        "disagreements":disagreements,
+        "diagnostic_only":True,
     }
