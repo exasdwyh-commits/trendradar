@@ -53,6 +53,8 @@ def analyze_pending(conn: sqlite3.Connection, limit: int = 12) -> dict:
         BUSINESS_COGNITION_SYSTEM,
         json.dumps(payload, ensure_ascii=False),
         timeout=120,
+        conn=conn,
+        task="cognition",
     )
     by_id = {r["id"]: r for r in rows}
     processed = 0
