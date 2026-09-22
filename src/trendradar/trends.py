@@ -147,14 +147,24 @@ def world_model_update(conn: sqlite3.Connection, days: int = 7) -> dict:
         }
 
     payload = {"trends": [dict(t) for t in trends], "recent_revisions": [dict(r) for r in revisions]}
-    data, model = chat_json(
-        "COGNITION_MODEL",
-        WORLD_MODEL_SYSTEM,
-        json.dumps(payload, ensure_ascii=False),
-        timeout=90,
-        conn=conn,
-        task="world_model",
-    )
+    try:
+        data, model = chat_json(
+            "COGNITION_MODEL",
+            WORLD_MODEL_SYSTEM,
+            json.dumps(payload, ensure_ascii=False),
+            timeout=90,
+            conn=conn,
+            task="world_model",
+        )
+    except Exception as exc:
+        return {
+            "enabled": True,
+            "degraded": True,
+            "error": str(exc)[:500],
+            "period_start": start.isoformat(),
+            "period_end": end.isoformat(),
+            "items": [dict(t) for t in trends],
+        }
     uid = uuid.uuid4().hex
     conn.execute(
         """
