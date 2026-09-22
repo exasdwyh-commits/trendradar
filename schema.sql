@@ -9,6 +9,12 @@ CREATE TABLE IF NOT EXISTS sources (
   type TEXT NOT NULL,
   url TEXT NOT NULL,
   include_pattern TEXT,
+  tier INTEGER NOT NULL DEFAULT 3,
+  reliability INTEGER NOT NULL DEFAULT 70,
+  business_value INTEGER NOT NULL DEFAULT 65,
+  noise INTEGER NOT NULL DEFAULT 30,
+  accuracy INTEGER NOT NULL DEFAULT 70,
+  max_per_round INTEGER,
   enabled INTEGER NOT NULL DEFAULT 1,
   note TEXT,
   created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
@@ -301,3 +307,56 @@ CREATE TABLE IF NOT EXISTS runs (
   stats_json TEXT,
   error TEXT
 );
+
+
+-- AI runtime observability. Model failures and throttling must be visible rather than silent.
+CREATE TABLE IF NOT EXISTS ai_runs (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  run_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  task TEXT NOT NULL,
+  slot TEXT NOT NULL,
+  model TEXT,
+  input_tokens INTEGER NOT NULL DEFAULT 0,
+  output_tokens INTEGER NOT NULL DEFAULT 0,
+  cost REAL NOT NULL DEFAULT 0,
+  duration_ms INTEGER NOT NULL DEFAULT 0,
+  ok INTEGER NOT NULL DEFAULT 0,
+  error TEXT,
+  attempts INTEGER NOT NULL DEFAULT 1,
+  retries INTEGER NOT NULL DEFAULT 0,
+  http_status INTEGER
+);
+CREATE INDEX IF NOT EXISTS idx_ai_runs_time ON ai_runs(run_at DESC);
+CREATE INDEX IF NOT EXISTS idx_ai_runs_slot ON ai_runs(slot, run_at DESC);
+
+-- Blind 10→3 evaluation: human choices are compared with the system only after submit.
+CREATE TABLE IF NOT EXISTS blind_rounds (
+  id TEXT PRIMARY KEY,
+  round_date TEXT NOT NULL UNIQUE,
+  system_top3_json TEXT NOT NULL,
+  human_picks_json TEXT,
+  hits INTEGER,
+  submitted_at TEXT,
+  created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE IF NOT EXISTS blind_items (
+  round_id TEXT NOT NULL REFERENCES blind_rounds(id) ON DELETE CASCADE,
+  candidate_id TEXT NOT NULL REFERENCES candidates(id) ON DELETE CASCADE,
+  position INTEGER NOT NULL,
+  PRIMARY KEY(round_id, candidate_id)
+);
+
+-- Freeze the research state that existed when content was actually published.
+CREATE TABLE IF NOT EXISTS content_snapshots (
+  id TEXT PRIMARY KEY,
+  document_id TEXT NOT NULL REFERENCES documents(id) ON DELETE CASCADE,
+  variant_id TEXT REFERENCES platform_variants(id) ON DELETE SET NULL,
+  publication_id TEXT REFERENCES publications(id) ON DELETE SET NULL,
+  candidate_id TEXT REFERENCES candidates(id) ON DELETE SET NULL,
+  thesis_id TEXT REFERENCES theses(id) ON DELETE SET NULL,
+  reason TEXT NOT NULL,
+  snapshot_json TEXT NOT NULL,
+  created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+CREATE INDEX IF NOT EXISTS idx_content_snapshots_doc ON content_snapshots(document_id, created_at DESC);
