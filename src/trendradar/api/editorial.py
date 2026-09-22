@@ -6,6 +6,7 @@ import sqlite3
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
 
+from ..judgement import list_judgements, review_judgement
 from ..pipeline import today
 from ..trends import latest_world_model_update
 from ..writing import (
@@ -22,6 +23,10 @@ from ..writing import (
 
 class ConfirmBody(BaseModel):
     horizon: str = "12个月"
+
+
+class ReviewJudgementBody(BaseModel):
+    result: str
 
 
 def _json_fields(data: dict, fields: list[str]) -> dict:
@@ -204,16 +209,21 @@ def build_editorial_router(get_conn) -> APIRouter:
 
     @router.get("/api/ledger")
     def ledger(conn: sqlite3.Connection = Depends(get_conn)):
-        rows=conn.execute(
-            """
-            SELECT jl.*,t.name trend_name,th.thesis
-            FROM judgement_ledger jl
-            LEFT JOIN trends t ON t.id=jl.trend_id
-            LEFT JOIN theses th ON th.id=jl.thesis_id
-            ORDER BY CASE WHEN jl.reviewed_at IS NULL THEN 0 ELSE 1 END,jl.created_at DESC
-            """
-        ).fetchall()
-        return {"items":[dict(r) for r in rows]}
+        return {"items":list_judgements(conn)}
+
+    @router.post("/api/ledger/{ledger_id}/review")
+    def review_ledger(
+        ledger_id: str,
+        body: ReviewJudgementBody,
+        conn: sqlite3.Connection = Depends(get_conn),
+    ):
+        try:
+            review_judgement(conn,ledger_id,body.result)
+            return {"ok":True}
+        except KeyError as exc:
+            raise HTTPException(404,str(exc)) from exc
+        except Exception as exc:
+            raise HTTPException(400,str(exc)) from exc
 
     @router.get("/api/intelligence")
     def intelligence(limit: int = 80, conn: sqlite3.Connection = Depends(get_conn)):
