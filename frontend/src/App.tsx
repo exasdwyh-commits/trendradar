@@ -296,18 +296,20 @@ function BlindEval(){
     {!round.submitted?<div className="blind-submit"><span>已选 {picks.length}/3</span><button className="primary-button" disabled={picks.length!==3||busy} onClick={()=>void submit()}>{busy?'提交中…':'提交后揭晓系统 TOP3'}</button></div>:
       <>
         <div className="world-card"><span>本轮结果</span><p>命中 {round.hits}/3。系统 TOP3：{systemTitles.join('；')}</p><small>盲评只检验选题选择是否接近你的判断，不代表观点本身正确。</small></div>
-        <CalibrationPanel data={data.calibration}/>
+        <CalibrationPanel data={data.calibration} mode={round.ranking_mode||'RULE'}/>
       </>}
   </>
 }
 
-function CalibrationPanel({data}:{data:any}){
+function CalibrationPanel({data,mode}:{data:any;mode:string}){
   if(!data)return null
-  if((data.rounds||0)<3)return <div className="calibration-card"><span>校准数据积累中</span><p>当前 {data.rounds||0} 轮。至少积累 3 轮后再看系统偏好与人工偏好的稳定差异，避免根据单日结果调参。</p></div>
-  const lanes=(data.lanes||[]).slice(0,5)
-  const disagreements=(data.disagreements||[]).slice(0,6)
+  const current=data.by_mode?.[mode]
+  const rounds=current?.rounds||0
+  if(rounds<3)return <div className="calibration-card"><span>{mode} 校准数据积累中</span><p>当前 {rounds} 轮。不同 ranking mode 分开统计；至少积累 3 轮后再看稳定差异，避免拿 RULE 结果误判 COGNITION。</p></div>
+  const lanes=(current?.lanes||[]).slice(0,5)
+  const disagreements=(current?.disagreements||[]).slice(0,6)
   return <section className="section">
-    <div className="section-title"><h2>校准视图</h2><span>只诊断，不自动改权重</span></div>
+    <div className="section-title"><h2>{mode} 校准视图</h2><span>只诊断，不自动改权重</span></div>
     <div className="calibration-grid">{lanes.map((x:any)=><div className="calibration-lane" key={x.key}><strong>{x.key}</strong><div><span>我选 {x.human}</span><span>系统选 {x.system}</span><span>重合 {x.overlap}</span></div></div>)}</div>
     {!!disagreements.length&&<div className="calibration-disagreements">{disagreements.map((x:any)=><div key={x.round_date+x.candidate_id+x.type}><Pill tone={x.type==='HUMAN_ONLY'?'blue':'amber'}>{x.type==='HUMAN_ONLY'?'我选·系统漏掉':'系统选·我没选'}</Pill><strong>{x.title}</strong><small>{x.round_date} · {x.lane} · {(x.source_ids||[]).join(' / ')}</small></div>)}</div>}
   </section>
