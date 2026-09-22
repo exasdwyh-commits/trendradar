@@ -65,6 +65,61 @@ def create_blank_document(conn: sqlite3.Connection, title: str = "未命名文�
     return document_id
 
 
+def _link_grounded_research_evidence(
+    conn: sqlite3.Connection,
+    document_id: str,
+    candidate_id: str,
+) -> None:
+    research = conn.execute(
+        """
+        SELECT id FROM research
+        WHERE candidate_id=?
+        ORDER BY created_at DESC
+        LIMIT 1
+        """,
+        (candidate_id,),
+    ).fetchone()
+    if not research:
+        return
+
+    rows = conn.execute(
+        """
+        SELECT ris.intelligence_id,
+          CASE
+            WHEN SUM(CASE WHEN ri.kind IN ('FACT','CLAIM') THEN 1 ELSE 0 END) > 0
+            THEN 'SUPPORT'
+            ELSE 'CONTEXT'
+          END relation
+        FROM research_items ri
+        JOIN research_item_sources ris ON ris.research_item_id=ri.id
+        WHERE ri.research_id=?
+        GROUP BY ris.intelligence_id
+        """,
+        (research["id"],),
+    ).fetchall()
+    for row in rows:
+        existing = conn.execute(
+            """
+            SELECT id FROM evidence_links
+            WHERE document_id=? AND intelligence_id=? AND text_anchor IS NULL
+            """,
+            (document_id,row["intelligence_id"]),
+        ).fetchone()
+        if existing:
+            continue
+        conn.execute(
+            """
+            INSERT INTO evidence_links(
+              id,document_id,intelligence_id,text_anchor,relation,note
+            ) VALUES(?,?,?,NULL,?,?)
+            """,
+            (
+                uuid.uuid4().hex,document_id,row["intelligence_id"],row["relation"],
+                "由最新研究包自动绑定",
+            ),
+        )
+
+
 def ensure_document_for_article(conn: sqlite3.Connection, article_id: str) -> str:
     existing = conn.execute("SELECT id FROM documents WHERE article_id=?", (article_id,)).fetchone()
     if existing:
@@ -87,6 +142,8 @@ def ensure_document_for_article(conn: sqlite3.Connection, article_id: str) -> st
         _text_to_tiptap(body), _plain_to_html(body), body,
         source="AI_DRAFT", note="由 Writer 初稿创建",
     )
+    _link_grounded_research_evidence(conn,document_id,article["candidate_id"])
+    conn.commit()
     return document_id
 
 
@@ -187,13 +244,31 @@ def get_document(conn: sqlite3.Connection, document_id: str) -> dict | None:
             (document_id,),
         ).fetchall()
     ]
-    if doc["candidate_id"]:
-        candidate = conn.execute("SELECT cluster_id FROM candidates WHERE id=?", (doc["candidate_id"],)).fetchone()
+    linked = conn.execute(
+        """
+        SELECT i.id,i.title,i.url,i.summary,i.kind,i.source_role,i.source_id,i.published_at,
+               el.relation,el.note
+        FROM evidence_links el
+        JOIN intelligence i ON i.id=el.intelligence_id
+        WHERE el.document_id=?
+        ORDER BY CASE el.relation WHEN 'SUPPORT' THEN 0 WHEN 'COUNTER' THEN 1 ELSE 2 END,
+                 i.evidence_score DESC
+        """,
+        (document_id,),
+    ).fetchall()
+    if linked:
+        result["evidence"] = [dict(r) for r in linked]
+    elif doc["candidate_id"]:
+        candidate = conn.execute(
+            "SELECT cluster_id FROM candidates WHERE id=?",
+            (doc["candidate_id"],),
+        ).fetchone()
         if candidate:
             result["evidence"] = [
                 dict(r) for r in conn.execute(
                     """
-                    SELECT i.id,i.title,i.url,i.summary,i.kind,i.source_role,i.source_id,i.published_at
+                    SELECT i.id,i.title,i.url,i.summary,i.kind,i.source_role,i.source_id,i.published_at,
+                           'CONTEXT' relation,NULL note
                     FROM cluster_items ci JOIN intelligence i ON i.id=ci.intelligence_id
                     WHERE ci.cluster_id=? ORDER BY i.evidence_score DESC
                     """,
