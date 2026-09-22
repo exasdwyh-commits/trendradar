@@ -26,8 +26,8 @@ def test_web_is_composition_root_not_business_route_monolith():
         "from .writing import",
         "from .content import",
         "from .evaluation import",
-        "@app.post("/api/candidates",
-        "@app.post("/api/documents",
+        '@app.post("/api/candidates',
+        '@app.post("/api/documents',
     ):
         assert forbidden not in source
 
