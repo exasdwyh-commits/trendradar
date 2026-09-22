@@ -14,7 +14,7 @@ def refine_candidates(conn: sqlite3.Connection, limit: int = 40) -> dict:
     rows = conn.execute(
         """
         SELECT * FROM candidates
-        WHERE cognition_status IN ('PENDING','FAILED')
+        WHERE action != 'SKIP' AND cognition_status IN ('PENDING','FAILED')
         ORDER BY content_score DESC,cognition_score DESC
         LIMIT ?
         """,
