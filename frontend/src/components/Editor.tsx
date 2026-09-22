@@ -31,7 +31,7 @@ function EvidenceList({items}:{items:Evidence[]}) {
   if (!items.length) return <div className="side-empty">这篇文章没有绑定研究证据。空白文章也可以独立创作。</div>
   return <div className="evidence-list">{items.map(item=>
     <a className="evidence-item" key={item.id} href={item.url} target="_blank" rel="noreferrer">
-      <div className="micro-row"><span className={`pill role-${item.source_role.toLowerCase()}`}>{item.source_role}</span><span className="pill">{item.kind}</span></div>
+      <div className="micro-row"><span className={`pill role-${item.source_role.toLowerCase()}`}>{item.source_role}</span><span className="pill">{item.kind}</span>{item.relation&&<span className={`pill relation-${item.relation.toLowerCase()}`}>{item.relation}</span>}</div>
       <strong>{item.title}</strong>
       <small>{item.source_id}{item.published_at ? ` · ${item.published_at.slice(0,10)}` : ''}</small>
       {item.summary && <p>{item.summary}</p>}
