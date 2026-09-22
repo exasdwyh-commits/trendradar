@@ -42,7 +42,10 @@ def latest_research(conn: sqlite3.Connection, candidate_id: str) -> dict | None:
 
 def research_candidate(conn: sqlite3.Connection, candidate_id: str) -> str:
     material = candidate_material(conn, candidate_id)
-    data, model = chat_json("RESEARCH_MODEL", RESEARCH_SYSTEM, json.dumps(material, ensure_ascii=False))
+    data, model = chat_json(
+        "RESEARCH_MODEL", RESEARCH_SYSTEM, json.dumps(material, ensure_ascii=False),
+        conn=conn, task="research"
+    )
     rid = uuid.uuid4().hex
     conn.execute(
         """
@@ -72,6 +75,8 @@ def propose_thesis(conn: sqlite3.Connection, candidate_id: str) -> str:
         "RESEARCH_MODEL",
         THESIS_SYSTEM,
         json.dumps({"research": research, **material}, ensure_ascii=False),
+        conn=conn,
+        task="thesis",
     )
     thesis = (data.get("thesis") or "").strip()
     if not thesis:
@@ -133,7 +138,10 @@ def draft_article(conn: sqlite3.Connection, thesis_id: str) -> tuple[str,str]:
     material = candidate_material(conn, thesis["candidate_id"])
     research = latest_research(conn, thesis["candidate_id"])
     payload = {"thesis": dict(thesis), "research": research, **material}
-    data, model = chat_json("WRITING_MODEL", WRITER_SYSTEM, json.dumps(payload, ensure_ascii=False))
+    data, model = chat_json(
+        "WRITING_MODEL", WRITER_SYSTEM, json.dumps(payload, ensure_ascii=False),
+        conn=conn, task="writer"
+    )
     aid = uuid.uuid4().hex
     conn.execute(
         """
@@ -160,7 +168,10 @@ def challenge_article(conn: sqlite3.Connection, article_id: str) -> str:
     material = candidate_material(conn, article["candidate_id"])
     research = latest_research(conn, article["candidate_id"])
     payload = {"article": dict(article), "research": research, **material}
-    data, model = chat_json("CRITIC_MODEL", CRITIC_SYSTEM, json.dumps(payload, ensure_ascii=False))
+    data, model = chat_json(
+        "CRITIC_MODEL", CRITIC_SYSTEM, json.dumps(payload, ensure_ascii=False),
+        conn=conn, task="critic"
+    )
     review_id = uuid.uuid4().hex
     verdict = data.get("verdict","REVISE")
     if verdict not in {"PASS","REVISE","BLOCK"}:
