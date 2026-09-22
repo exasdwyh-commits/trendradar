@@ -18,16 +18,27 @@ from .scoring import high_confidence_allowed
 def sync_sources(conn: sqlite3.Connection, sources: list[Source]) -> None:
     conn.executemany(
         """
-        INSERT INTO sources(id,name,lane,role,type,url,include_pattern,enabled,note)
-        VALUES(:id,:name,:lane,:role,:type,:url,:include_pattern,:enabled,:note)
+        INSERT INTO sources(
+          id,name,lane,role,type,url,include_pattern,tier,reliability,business_value,
+          noise,accuracy,max_per_round,enabled,note
+        )
+        VALUES(
+          :id,:name,:lane,:role,:type,:url,:include_pattern,:tier,:reliability,:business_value,
+          :noise,:accuracy,:max_per_round,:enabled,:note
+        )
         ON CONFLICT(id) DO UPDATE SET
           name=excluded.name,lane=excluded.lane,role=excluded.role,type=excluded.type,
-          url=excluded.url,include_pattern=excluded.include_pattern,
+          url=excluded.url,include_pattern=excluded.include_pattern,tier=excluded.tier,
+          reliability=excluded.reliability,business_value=excluded.business_value,
+          noise=excluded.noise,accuracy=excluded.accuracy,max_per_round=excluded.max_per_round,
           enabled=excluded.enabled,note=excluded.note
         """,
         [{
             "id": s.id, "name": s.name, "lane": s.lane, "role": s.role, "type": s.type,
             "url": s.url, "include_pattern": s.include_pattern,
+            "tier": s.tier, "reliability": s.reliability,
+            "business_value": s.business_value, "noise": s.noise,
+            "accuracy": s.accuracy, "max_per_round": s.max_per_round,
             "enabled": 1 if s.enabled else 0, "note": s.note,
         } for s in sources],
     )
@@ -97,7 +108,8 @@ def collect_all(
             continue
         started = time.perf_counter()
         try:
-            items = collect_source(source, timeout=timeout, limit=limit, enrich_limit=enrich_limit)
+            source_limit = min(limit, source.max_per_round or limit)
+            items = collect_source(source, timeout=timeout, limit=source_limit, enrich_limit=enrich_limit)
             latency = int((time.perf_counter() - started) * 1000)
             _health_success(conn, source.id, len(items), latency)
             stats["sources_ok"] += 1
