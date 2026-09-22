@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import hashlib
+from concurrent.futures import ThreadPoolExecutor, as_completed
 import json
 import sqlite3
 import time
@@ -72,7 +73,6 @@ def store_item(conn: sqlite3.Connection, item: Item) -> bool:
         """,
         payload,
     )
-    conn.commit()
     return conn.total_changes > before
 
 
@@ -106,34 +106,98 @@ def _health_failure(conn: sqlite3.Connection, source_id: str, error: str, latenc
     )
 
 
+def _fetch_source_result(
+    source: Source,
+    *,
+    timeout: float,
+    limit: int,
+    enrich_limit: int,
+) -> dict:
+    started = time.perf_counter()
+    try:
+        source_limit = min(limit, source.max_per_round or limit)
+        items = collect_source(
+            source,
+            timeout=timeout,
+            limit=source_limit,
+            enrich_limit=enrich_limit,
+        )
+        return {
+            "source": source,
+            "items": items,
+            "latency_ms": int((time.perf_counter() - started) * 1000),
+            "error": None,
+        }
+    except Exception as exc:
+        return {
+            "source": source,
+            "items": [],
+            "latency_ms": int((time.perf_counter() - started) * 1000),
+            "error": str(exc)[:500],
+        }
+
+
 def collect_all(
     conn: sqlite3.Connection,
     sources: list[Source],
     timeout: float = 18,
     limit: int = 18,
     enrich_limit: int = 6,
+    max_workers: int = 6,
 ) -> dict:
-    stats = {"sources_ok": 0, "sources_failed": 0, "items_seen": 0, "items_new": 0, "failures": []}
-    for source in sources:
-        if not source.enabled:
-            continue
-        started = time.perf_counter()
-        try:
-            source_limit = min(limit, source.max_per_round or limit)
-            items = collect_source(source, timeout=timeout, limit=source_limit, enrich_limit=enrich_limit)
-            latency = int((time.perf_counter() - started) * 1000)
+    active = [source for source in sources if source.enabled]
+    stats = {
+        "sources_ok": 0,
+        "sources_failed": 0,
+        "items_seen": 0,
+        "items_new": 0,
+        "failures": [],
+        "slowest_sources": [],
+    }
+    if not active:
+        return stats
+
+    results = []
+    worker_count = max(1, min(int(max_workers or 1), len(active)))
+    with ThreadPoolExecutor(max_workers=worker_count) as executor:
+        futures = [
+            executor.submit(
+                _fetch_source_result,
+                source,
+                timeout=timeout,
+                limit=limit,
+                enrich_limit=enrich_limit,
+            )
+            for source in active
+        ]
+        for future in as_completed(futures):
+            results.append(future.result())
+
+    # Network work happens concurrently; SQLite writes stay serialized here.
+    for result in results:
+        source = result["source"]
+        latency = result["latency_ms"]
+        if result["error"]:
+            _health_failure(conn, source.id, result["error"], latency)
+            stats["sources_failed"] += 1
+            stats["failures"].append({
+                "source": source.id,
+                "error": result["error"][:180],
+            })
+        else:
+            items = result["items"]
             _health_success(conn, source.id, len(items), latency)
             stats["sources_ok"] += 1
             for item in items:
                 stats["items_seen"] += 1
                 if store_item(conn, item):
                     stats["items_new"] += 1
-        except Exception as exc:
-            latency = int((time.perf_counter() - started) * 1000)
-            _health_failure(conn, source.id, str(exc), latency)
-            stats["sources_failed"] += 1
-            stats["failures"].append({"source": source.id, "error": str(exc)[:180]})
         conn.commit()
+
+    stats["slowest_sources"] = [
+        {"source": r["source"].id, "latency_ms": r["latency_ms"]}
+        for r in sorted(results, key=lambda x: x["latency_ms"], reverse=True)[:5]
+    ]
     return stats
 
 
@@ -363,6 +427,7 @@ def run_daily(
     cognition_limit: int = 12,
     candidate_snapshot_limit: int = 20,
     lookback_hours: int = 72,
+    collection_workers: int = 6,
 ) -> dict:
     from .brief import write_daily_brief
     from .cognition import analyze_pending
@@ -378,7 +443,14 @@ def run_daily(
     )
     conn.commit()
     try:
-        collection = collect_all(conn, sources, timeout=timeout, limit=limit, enrich_limit=enrich_limit)
+        collection = collect_all(
+            conn,
+            sources,
+            timeout=timeout,
+            limit=limit,
+            enrich_limit=enrich_limit,
+            max_workers=collection_workers,
+        )
         new_clusters = cluster_unassigned(conn)
         candidate_count = upsert_candidates(conn)
         fast_rank = refine_candidates(conn, limit=fast_limit)
