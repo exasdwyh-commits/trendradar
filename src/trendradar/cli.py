@@ -42,6 +42,7 @@ def main() -> None:
 
     def tick():
         cfg = settings.get("collection",{})
+        ranking = settings.get("ranking",{})
         return run_daily(
             conn,
             enabled_sources(sources),
@@ -49,6 +50,10 @@ def main() -> None:
             limit=int(cfg.get("per_source_limit",18)),
             enrich_limit=int(cfg.get("article_enrich_limit",6)),
             output_dir=root / "output" / "daily",
+            fast_limit=int(ranking.get("fast_pool_size",40)),
+            cognition_limit=int(ranking.get("cognition_pool_size",12)),
+            candidate_snapshot_limit=int(ranking.get("candidate_snapshot_size",20)),
+            lookback_hours=int(cfg.get("lookback_hours",72)),
         )
 
     if args.command == "init":
