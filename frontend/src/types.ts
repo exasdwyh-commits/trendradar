@@ -158,6 +158,7 @@ export type WorldModel = {
 
 export type Health = {
   ok: boolean
+  schema_version?: number
   last_run?: { status: string; started_at: string }
   models: Record<string, { enabled: boolean; model?: string }>
 }
