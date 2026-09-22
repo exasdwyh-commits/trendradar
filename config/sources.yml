@@ -1,16 +1,24 @@
-version: 3
+version: 4
 
-# 彻底商业化：不再抓娱乐/泛社会/体育/热搜。
-# role:
-#   PRIMARY   原始事实/公司/统计/行业组织
-#   VERIFIER  独立媒体/研究验证
-#   DISCOVERY 只发现线索
+# TrendRadar 3.1 商业信号源注册表
 #
-# lane:
-#   COMPANY | INDUSTRY | BUSINESS_MODEL | AI_COMMERCIALIZATION | GLOBALIZATION
+# role:
+#   PRIMARY   第一方/官方/原始数据
+#   VERIFIER  高质量独立媒体/研究
+#   DISCOVERY 社区/作者/论坛，仅负责发现线索
+#
+# tier:
+#   1 核心源：每日稳定抓，商业信号密度高
+#   2 重要源：每日抓但限额更低
+#   3 行业源：补充行业结构变化
+#   4 Discovery：只发现线索，不独立形成高置信结论
+#
+# quality:
+#   reliability / business_value / noise / accuracy 取值 0-100
+#   max_per_round 控制单轮抓取上限，防止低产出源淹没候选池
 
 sources:
-  # ===== AI 商业化：第一方 =====
+  # ===== AI / 软件商业化：一级第一方 =====
   - id: openai-news
     name: OpenAI News
     lane: AI_COMMERCIALIZATION
@@ -18,6 +26,12 @@ sources:
     type: html
     url: https://openai.com/news/
     include: "/index/|/news/|/business/"
+    tier: 1
+    reliability: 88
+    business_value: 82
+    noise: 18
+    accuracy: 86
+    max_per_round: 12
 
   - id: anthropic-news
     name: Anthropic News
@@ -26,6 +40,12 @@ sources:
     type: html
     url: https://www.anthropic.com/news
     include: "/news/"
+    tier: 1
+    reliability: 88
+    business_value: 80
+    noise: 18
+    accuracy: 86
+    max_per_round: 12
 
   - id: google-deepmind
     name: Google DeepMind
@@ -34,14 +54,25 @@ sources:
     type: html
     url: https://deepmind.google/discover/blog/
     include: "/discover/blog/"
+    tier: 1
+    reliability: 88
+    business_value: 66
+    noise: 30
+    accuracy: 86
+    max_per_round: 8
 
-  - id: nvidia-blog
-    name: NVIDIA Blog
-    lane: INDUSTRY
+  - id: google-ai-keyword
+    name: Google · The Keyword AI
+    lane: AI_COMMERCIALIZATION
     role: PRIMARY
-    type: html
-    url: https://blogs.nvidia.com/
-    include: "/blog/|/data-center/|/industries/"
+    type: rss
+    url: https://blog.google/technology/ai/rss/
+    tier: 1
+    reliability: 84
+    business_value: 72
+    noise: 26
+    accuracy: 82
+    max_per_round: 10
 
   - id: microsoft-ai
     name: Microsoft AI
@@ -50,6 +81,12 @@ sources:
     type: html
     url: https://blogs.microsoft.com/ai/
     include: "/ai/"
+    tier: 1
+    reliability: 86
+    business_value: 78
+    noise: 24
+    accuracy: 84
+    max_per_round: 10
 
   - id: meta-ai
     name: Meta AI
@@ -58,6 +95,51 @@ sources:
     type: html
     url: https://ai.meta.com/blog/
     include: "/blog/"
+    tier: 1
+    reliability: 84
+    business_value: 66
+    noise: 30
+    accuracy: 82
+    max_per_round: 8
+
+  - id: aws-machine-learning
+    name: AWS Machine Learning
+    lane: AI_COMMERCIALIZATION
+    role: PRIMARY
+    type: rss
+    url: https://aws.amazon.com/blogs/machine-learning/feed/
+    tier: 1
+    reliability: 82
+    business_value: 68
+    noise: 28
+    accuracy: 82
+    max_per_round: 10
+
+  - id: github-blog
+    name: GitHub Blog
+    lane: AI_COMMERCIALIZATION
+    role: PRIMARY
+    type: rss
+    url: https://github.blog/feed/
+    tier: 1
+    reliability: 80
+    business_value: 64
+    noise: 30
+    accuracy: 80
+    max_per_round: 8
+
+  - id: stripe-blog
+    name: Stripe
+    lane: BUSINESS_MODEL
+    role: PRIMARY
+    type: rss
+    url: https://stripe.com/blog/feed.rss
+    tier: 1
+    reliability: 82
+    business_value: 82
+    noise: 14
+    accuracy: 82
+    max_per_round: 10
 
   # ===== 公司 / 资本 / 商业 =====
   - id: sec-edgar
@@ -66,6 +148,12 @@ sources:
     role: PRIMARY
     type: html
     url: https://www.sec.gov/edgar/search/
+    tier: 1
+    reliability: 98
+    business_value: 90
+    noise: 8
+    accuracy: 98
+    max_per_round: 12
     enabled: false
     note: "需要专用 filing adapter；先登记，不用通用 HTML 抓取。"
 
@@ -76,13 +164,12 @@ sources:
     type: html
     url: https://www.ycombinator.com/companies
     include: "/companies/"
-
-  - id: techcrunch
-    name: TechCrunch
-    lane: BUSINESS_MODEL
-    role: VERIFIER
-    type: rss
-    url: https://techcrunch.com/feed/
+    tier: 2
+    reliability: 78
+    business_value: 74
+    noise: 34
+    accuracy: 76
+    max_per_round: 6
 
   - id: reuters-business
     name: Reuters Business
@@ -91,6 +178,12 @@ sources:
     type: html
     url: https://www.reuters.com/business/
     include: "/business/"
+    tier: 1
+    reliability: 92
+    business_value: 88
+    noise: 12
+    accuracy: 92
+    max_per_round: 14
 
   - id: reuters-technology
     name: Reuters Technology
@@ -99,6 +192,12 @@ sources:
     type: html
     url: https://www.reuters.com/technology/
     include: "/technology/"
+    tier: 1
+    reliability: 92
+    business_value: 84
+    noise: 14
+    accuracy: 92
+    max_per_round: 12
 
   - id: financial-times
     name: Financial Times
@@ -107,8 +206,67 @@ sources:
     type: html
     url: https://www.ft.com/companies
     include: "/content/"
+    tier: 1
+    reliability: 90
+    business_value: 90
+    noise: 12
+    accuracy: 90
+    max_per_round: 12
+
+  - id: techcrunch
+    name: TechCrunch
+    lane: BUSINESS_MODEL
+    role: VERIFIER
+    type: rss
+    url: https://techcrunch.com/feed/
+    tier: 2
+    reliability: 76
+    business_value: 78
+    noise: 34
+    accuracy: 74
+    max_per_round: 8
+
+  - id: sifted
+    name: Sifted
+    lane: BUSINESS_MODEL
+    role: VERIFIER
+    type: rss
+    url: https://sifted.eu/feed
+    tier: 2
+    reliability: 82
+    business_value: 80
+    noise: 18
+    accuracy: 82
+    max_per_round: 8
+
+  - id: tech-eu
+    name: Tech.eu
+    lane: BUSINESS_MODEL
+    role: VERIFIER
+    type: rss
+    url: https://tech.eu/feed/
+    tier: 3
+    reliability: 74
+    business_value: 72
+    noise: 26
+    accuracy: 74
+    max_per_round: 6
 
   # ===== 产业 / 能源 / 制造 =====
+  - id: nvidia-blog
+    name: NVIDIA Blog
+    lane: INDUSTRY
+    role: PRIMARY
+    type: html
+    url: https://blogs.nvidia.com/
+    include: "/blog/|/data-center/|/industries/"
+    tier: 1
+    reliability: 84
+    business_value: 78
+    noise: 24
+    accuracy: 82
+    max_per_round: 10
+
   - id: iea
     name: International Energy Agency
     lane: INDUSTRY
@@ -116,6 +274,12 @@ sources:
     type: html
     url: https://www.iea.org/news
     include: "/news/"
+    tier: 1
+    reliability: 94
+    business_value: 76
+    noise: 10
+    accuracy: 94
+    max_per_round: 8
 
   - id: semiconductor-industry-association
     name: Semiconductor Industry Association
@@ -124,6 +288,12 @@ sources:
     type: html
     url: https://www.semiconductors.org/category/press-releases/
     include: "/press-releases/"
+    tier: 1
+    reliability: 84
+    business_value: 82
+    noise: 20
+    accuracy: 84
+    max_per_round: 8
 
   - id: ifr
     name: International Federation of Robotics
@@ -132,6 +302,77 @@ sources:
     type: html
     url: https://ifr.org/ifr-press-releases
     include: "/ifr-press-releases/"
+    tier: 1
+    reliability: 86
+    business_value: 80
+    noise: 18
+    accuracy: 86
+    max_per_round: 8
+
+  - id: supply-chain-dive
+    name: Supply Chain Dive
+    lane: INDUSTRY
+    role: VERIFIER
+    type: rss
+    url: https://www.supplychaindive.com/feeds/news/
+    tier: 3
+    reliability: 76
+    business_value: 72
+    noise: 24
+    accuracy: 76
+    max_per_round: 6
+
+  - id: manufacturing-dive
+    name: Manufacturing Dive
+    lane: INDUSTRY
+    role: VERIFIER
+    type: rss
+    url: https://www.manufacturingdive.com/feeds/news/
+    tier: 3
+    reliability: 76
+    business_value: 74
+    noise: 24
+    accuracy: 76
+    max_per_round: 6
+
+  - id: utility-dive
+    name: Utility Dive
+    lane: INDUSTRY
+    role: VERIFIER
+    type: rss
+    url: https://www.utilitydive.com/feeds/news/
+    tier: 3
+    reliability: 76
+    business_value: 74
+    noise: 26
+    accuracy: 76
+    max_per_round: 6
+
+  - id: retail-dive
+    name: Retail Dive
+    lane: BUSINESS_MODEL
+    role: VERIFIER
+    type: rss
+    url: https://www.retaildive.com/feeds/news/
+    tier: 3
+    reliability: 76
+    business_value: 72
+    noise: 28
+    accuracy: 76
+    max_per_round: 6
+
+  - id: banking-dive
+    name: Banking Dive
+    lane: COMPANY
+    role: VERIFIER
+    type: rss
+    url: https://www.bankingdive.com/feeds/news/
+    tier: 3
+    reliability: 76
+    business_value: 72
+    noise: 24
+    accuracy: 76
+    max_per_round: 6
 
   - id: construction-physics
     name: Construction Physics
@@ -140,6 +381,12 @@ sources:
     type: html
     url: https://www.construction-physics.com/
     include: "/p/"
+    tier: 2
+    reliability: 84
+    business_value: 74
+    noise: 12
+    accuracy: 82
+    max_per_round: 6
 
   # ===== 中国商业映射 =====
   - id: china-nbs
@@ -149,6 +396,12 @@ sources:
     type: html
     url: https://www.stats.gov.cn/sj/zxfb/
     include: "/sj/zxfb/"
+    tier: 1
+    reliability: 94
+    business_value: 78
+    noise: 10
+    accuracy: 94
+    max_per_round: 10
 
   - id: china-customs
     name: 海关总署
@@ -156,6 +409,12 @@ sources:
     role: PRIMARY
     type: html
     url: http://www.customs.gov.cn/
+    tier: 1
+    reliability: 94
+    business_value: 84
+    noise: 12
+    accuracy: 94
+    max_per_round: 8
     enabled: false
     note: "站点结构不稳定，后续做专用 adapter。"
 
@@ -165,6 +424,12 @@ sources:
     role: PRIMARY
     type: html
     url: https://www.mofcom.gov.cn/
+    tier: 1
+    reliability: 92
+    business_value: 82
+    noise: 14
+    accuracy: 92
+    max_per_round: 8
     enabled: false
     note: "后续做专用 adapter。"
 
@@ -174,10 +439,16 @@ sources:
     role: PRIMARY
     type: html
     url: https://www.miit.gov.cn/
+    tier: 1
+    reliability: 92
+    business_value: 80
+    noise: 14
+    accuracy: 92
+    max_per_round: 8
     enabled: false
     note: "后续做专用 adapter。"
 
-  # ===== 独立商业分析 =====
+  # ===== 独立商业 / 产品分析 =====
   - id: stratechery
     name: Stratechery
     lane: COMPANY
@@ -185,6 +456,64 @@ sources:
     type: html
     url: https://stratechery.com/
     include: "/202"
+    tier: 2
+    reliability: 86
+    business_value: 88
+    noise: 10
+    accuracy: 84
+    max_per_round: 6
+
+  - id: one-useful-thing
+    name: One Useful Thing
+    lane: AI_COMMERCIALIZATION
+    role: VERIFIER
+    type: rss
+    url: https://www.oneusefulthing.org/feed
+    tier: 2
+    reliability: 84
+    business_value: 76
+    noise: 10
+    accuracy: 82
+    max_per_round: 6
+
+  - id: interconnects
+    name: Interconnects
+    lane: AI_COMMERCIALIZATION
+    role: VERIFIER
+    type: rss
+    url: https://www.interconnects.ai/feed
+    tier: 2
+    reliability: 82
+    business_value: 66
+    noise: 10
+    accuracy: 84
+    max_per_round: 5
+
+  - id: lennys-newsletter
+    name: Lenny's Newsletter
+    lane: BUSINESS_MODEL
+    role: VERIFIER
+    type: rss
+    url: https://www.lennysnewsletter.com/feed
+    tier: 2
+    reliability: 80
+    business_value: 80
+    noise: 22
+    accuracy: 78
+    max_per_round: 6
+
+  - id: saastr
+    name: SaaStr
+    lane: BUSINESS_MODEL
+    role: VERIFIER
+    type: rss
+    url: https://www.saastr.com/feed/
+    tier: 3
+    reliability: 72
+    business_value: 78
+    noise: 34
+    accuracy: 70
+    max_per_round: 6
 
   - id: works-in-progress
     name: Works in Progress
@@ -193,14 +522,26 @@ sources:
     type: html
     url: https://worksinprogress.co/
     include: "/issue/|/article/"
+    tier: 2
+    reliability: 84
+    business_value: 72
+    noise: 12
+    accuracy: 82
+    max_per_round: 5
 
-  # ===== 发现层 =====
+  # ===== Discovery：只负责发现线索 =====
   - id: hacker-news
     name: Hacker News
     lane: BUSINESS_MODEL
     role: DISCOVERY
     type: rss
     url: https://hnrss.org/frontpage
+    tier: 4
+    reliability: 58
+    business_value: 64
+    noise: 62
+    accuracy: 58
+    max_per_round: 10
 
   - id: reddit-startups
     name: Reddit startups
@@ -208,6 +549,12 @@ sources:
     role: DISCOVERY
     type: rss
     url: https://www.reddit.com/r/startups/.rss
+    tier: 4
+    reliability: 54
+    business_value: 62
+    noise: 68
+    accuracy: 54
+    max_per_round: 8
 
   - id: reddit-smallbusiness
     name: Reddit smallbusiness
@@ -215,6 +562,12 @@ sources:
     role: DISCOVERY
     type: rss
     url: https://www.reddit.com/r/smallbusiness/.rss
+    tier: 4
+    reliability: 52
+    business_value: 64
+    noise: 66
+    accuracy: 52
+    max_per_round: 8
 
   - id: reddit-localllama
     name: Reddit LocalLLaMA
@@ -222,3 +575,9 @@ sources:
     role: DISCOVERY
     type: rss
     url: https://www.reddit.com/r/LocalLLaMA/.rss
+    tier: 4
+    reliability: 54
+    business_value: 58
+    noise: 70
+    accuracy: 54
+    max_per_round: 8
