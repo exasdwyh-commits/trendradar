@@ -334,7 +334,7 @@ function System(){
   useEffect(()=>{Promise.all([api.get<Health>('/api/health'),api.get('/api/ai-runs?limit=60')]).then(([h,a])=>{setHealth(h);setAi(a)})},[])
   if(!health)return <Empty>正在读取系统状态…</Empty>
   return <>
-    <Header eyebrow="PRO TOOLS" title="系统状态" sub="某个模型没配置时明确显示离线；重试、429、Token 与延迟也必须可观察。"/>
+    <Header eyebrow="PRO TOOLS" title="系统状态" sub={`Schema v${health.schema_version??'—'} · 某个模型没配置时明确显示离线；重试、429、Token 与延迟也必须可观察。`}/>
     <div className="model-grid">{Object.entries(health.models||{}).map(([name,m])=><div className="model-card" key={name}><div className={m.enabled?'model-dot on':'model-dot'}/><div><strong>{name}</strong><p>{m.enabled?m.model:'未配置'}</p></div></div>)}</div>
     <section className="section"><div className="section-title"><h2>AI 调用质量</h2><span>按模型槽位与任务聚合</span></div>
       {!ai?.aggregate?.length?<Empty>还没有 AI 调用记录。</Empty>:<div className="source-table">{ai.aggregate.map((x:any)=><div className="source-row" key={x.slot+x.task}><div><div className="micro-row"><Pill>{x.slot}</Pill><Pill>{x.task}</Pill></div><strong>{x.ok_calls}/{x.calls} 成功</strong><small>输入 {x.input_tokens} · 输出 {x.output_tokens} · 重试 {x.retries}{x.cost_cny? ` · ¥${Number(x.cost_cny).toFixed(4)}` : ''}</small></div><div className="health good">平均 {x.avg_duration_ms} ms</div></div>)}</div>}
