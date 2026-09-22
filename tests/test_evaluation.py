@@ -116,7 +116,8 @@ def test_calibration_summary_tracks_human_and_system_disagreements():
     report = calibration_summary(conn)
     assert report["rounds"] == 1
     assert report["diagnostic_only"] is True
-    types = {item["type"] for item in report["disagreements"]}
+    assert "RULE" in report["by_mode"]
+    types = {item["type"] for item in report["by_mode"]["RULE"]["disagreements"]}
     assert types == {"HUMAN_ONLY","SYSTEM_ONLY"}
 
 
