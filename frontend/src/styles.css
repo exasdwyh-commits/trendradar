@@ -78,3 +78,5 @@
 @media(max-width:980px){.research-pack-grid{grid-template-columns:1fr}.research-risk-grid{grid-template-columns:1fr}}
 
 .relation-support{background:#eaf6f0;color:#187454}.relation-counter{background:#fff0ee;color:#a7473f}.relation-context{background:#f0f1ef;color:#68717e}
+
+.tool-mini{font-size:9px;color:#7d8794;margin-left:2px}
