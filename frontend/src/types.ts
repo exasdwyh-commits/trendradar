@@ -50,6 +50,9 @@ export type ResearchPack = {
     grounded_units: number
     evidence_ids: string[]
     evidence_count: number
+    independent_source_count?: number
+    quality_source_count?: number
+    source_ids?: string[]
   }
 }
 
