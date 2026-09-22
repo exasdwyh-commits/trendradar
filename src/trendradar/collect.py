@@ -4,7 +4,7 @@ import hashlib
 import json
 import re
 from dataclasses import dataclass
-from datetime import datetime
+from datetime import datetime, timedelta, timezone
 from email.utils import parsedate_to_datetime
 from urllib.parse import urljoin, urlsplit, urlunsplit
 
@@ -107,20 +107,34 @@ def make_item(
 
 def collect_rss(source: Source, limit: int = 18) -> list[Item]:
     parsed = feedparser.parse(source.url)
-    items: list[Item] = []
-    for entry in parsed.entries[:limit]:
+    scan_limit = source.scan_limit or max(limit, 80 if source.window_days else limit)
+    cutoff = None
+    if source.window_days:
+        cutoff = datetime.now(timezone.utc) - timedelta(days=source.window_days)
+
+    picked: list[Item] = []
+    for entry in parsed.entries[:scan_limit]:
         title = str(entry.get("title", "")).strip()
         url = str(entry.get("link", "")).strip()
         if not title or not url:
             continue
         stamp = entry.get("published_parsed") or entry.get("updated_parsed")
-        published = datetime(*stamp[:6]) if stamp else None
+        published = datetime(*stamp[:6], tzinfo=timezone.utc) if stamp else None
+
+        # A time window protects high-volume full-history feeds from a quota bug:
+        # we scan enough recent history first, then apply max_per_round. Entries
+        # without a parseable date are kept rather than silently discarded.
+        if cutoff is not None and published is not None and published < cutoff:
+            continue
+
         summary = re.sub(r"<[^>]+>", " ", str(entry.get("summary", "")))
         content_blocks = entry.get("content") or []
         content = " ".join(str(x.get("value","")) for x in content_blocks)
         content = re.sub(r"<[^>]+>", " ", content)
-        items.append(make_item(source, title, url, summary, published, content))
-    return items
+        picked.append(make_item(source, title, url, summary, published, content))
+        if len(picked) >= limit:
+            break
+    return picked
 
 
 def _json_ld(soup: BeautifulSoup) -> list[dict]:
