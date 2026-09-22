@@ -9,7 +9,7 @@ from dataclasses import asdict
 from datetime import datetime, timezone
 from pathlib import Path
 
-from .cluster import similarity
+from .cluster import same_event_score
 from .collect import Item, collect_source
 from .config import Source
 from .scoring import high_confidence_allowed
@@ -138,20 +138,28 @@ def collect_all(
 def _existing_clusters(conn: sqlite3.Connection, lane: str) -> list[sqlite3.Row]:
     return conn.execute(
         """
-        SELECT sc.id,sc.canonical_title
+        SELECT sc.id,sc.canonical_title,
+          COALESCE((
+            SELECT i.summary || ' ' || i.content
+            FROM cluster_items ci
+            JOIN intelligence i ON i.id=ci.intelligence_id
+            WHERE ci.cluster_id=sc.id
+            ORDER BY i.evidence_score DESC,COALESCE(i.published_at,i.collected_at) DESC
+            LIMIT 1
+          ),'') representative_body
         FROM story_clusters sc
         WHERE sc.lane=?
         ORDER BY sc.updated_at DESC
-        LIMIT 200
+        LIMIT 300
         """,
         (lane,),
     ).fetchall()
 
 
-def cluster_unassigned(conn: sqlite3.Connection, threshold: float = 0.42, limit: int = 800) -> int:
+def cluster_unassigned(conn: sqlite3.Connection, threshold: float = 0.40, limit: int = 800) -> int:
     rows = conn.execute(
         """
-        SELECT i.id,i.title,i.lane
+        SELECT i.id,i.title,i.lane,COALESCE(i.summary,'') summary,COALESCE(i.content,'') content
         FROM intelligence i
         LEFT JOIN cluster_items ci ON ci.intelligence_id=i.id
         WHERE ci.intelligence_id IS NULL AND i.origin='live'
@@ -167,8 +175,14 @@ def cluster_unassigned(conn: sqlite3.Connection, threshold: float = 0.42, limit:
         candidates = cache.setdefault(lane, list(_existing_clusters(conn, lane)))
         best = None
         best_score = 0.0
+        body = f"{row['summary']} {row['content']}"
         for cluster in candidates:
-            score = similarity(row["title"], cluster["canonical_title"])
+            score = same_event_score(
+                row["title"],
+                body,
+                cluster["canonical_title"],
+                cluster.get("representative_body","") if isinstance(cluster, dict) else cluster["representative_body"],
+            )
             if score > best_score:
                 best, best_score = cluster, score
         if best is not None and best_score >= threshold:
@@ -179,7 +193,11 @@ def cluster_unassigned(conn: sqlite3.Connection, threshold: float = 0.42, limit:
                 "INSERT OR IGNORE INTO story_clusters(id,canonical_title,lane) VALUES(?,?,?)",
                 (cluster_id,row["title"],lane),
             )
-            candidates.append({"id": cluster_id, "canonical_title": row["title"]})
+            candidates.append({
+                "id": cluster_id,
+                "canonical_title": row["title"],
+                "representative_body": body,
+            })
             created += 1
         conn.execute(
             "INSERT OR IGNORE INTO cluster_items(cluster_id,intelligence_id) VALUES(?,?)",
@@ -202,7 +220,10 @@ def upsert_candidates(conn: sqlite3.Connection) -> int:
                MAX(i.evidence_score) evidence,
                MAX(i.freshness_score) freshness,
                MAX(i.commercial_score) commercial,
-               COUNT(DISTINCT i.source_id) source_count
+               COUNT(DISTINCT i.source_id) source_count,
+               SUM(CASE WHEN i.source_role='PRIMARY' THEN 1 ELSE 0 END) primary_count,
+               SUM(CASE WHEN i.source_role='VERIFIER' THEN 1 ELSE 0 END) verifier_count,
+               SUM(CASE WHEN i.source_role='DISCOVERY' THEN 1 ELSE 0 END) discovery_count
         FROM story_clusters sc
         JOIN cluster_items ci ON ci.cluster_id=sc.id
         JOIN intelligence i ON i.id=ci.intelligence_id
@@ -222,10 +243,33 @@ def upsert_candidates(conn: sqlite3.Connection) -> int:
             )
         }
         evidence_ok = high_confidence_allowed(roles)
-        cognition = min(100.0, row["evidence"] * 0.35 + row["commercial"] * 0.45 + row["freshness"] * 0.20)
-        diversity_bonus = min(12.0, max(0, row["source_count"] - 1) * 6.0)
-        content = min(100.0, row["commercial"] * 0.60 + row["freshness"] * 0.25 + diversity_bonus)
-        action = "WRITE" if evidence_ok and content >= 70 else "TRACK" if content >= 52 else "SKIP"
+        source_count = int(row["source_count"] or 0)
+        corroborated = source_count >= 2 and (
+            int(row["primary_count"] or 0) > 0 or int(row["verifier_count"] or 0) > 0
+        )
+        cognition = min(
+            100.0,
+            row["evidence"] * 0.35 + row["commercial"] * 0.45 + row["freshness"] * 0.20
+        )
+        diversity_bonus = min(14.0, max(0, source_count - 1) * 7.0)
+        single_source_penalty = 8.0 if source_count < 2 else 0.0
+        content = min(
+            100.0,
+            max(
+                0.0,
+                row["commercial"] * 0.60
+                + row["freshness"] * 0.25
+                + diversity_bonus
+                - single_source_penalty,
+            ),
+        )
+        action = (
+            "WRITE"
+            if evidence_ok and corroborated and content >= 70
+            else "TRACK"
+            if content >= 52
+            else "SKIP"
+        )
         cid = hashlib.sha256(f"candidate|{row['id']}".encode()).hexdigest()[:24]
         existing = conn.execute("SELECT id,cognition_status FROM candidates WHERE id=?", (cid,)).fetchone()
         if existing:
