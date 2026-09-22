@@ -126,31 +126,30 @@ TrendRadar 只服务一个目标：
 
 1. **研究来源独立性**
    - evidence id 多不等于来源独立；
-   - Thesis gate 必须按 source_id 判断。
-   - 状态：已进入修复。
+   - Thesis gate 按 source_id 判断，并要求至少一个 PRIMARY / VERIFIER。
+   - 状态：已修复并有回归测试。
 
 2. **排名 provenance**
    - Rule-only 与 Cognition 结果不能混在同一 Blind 指标里解释。
-   - 状态：已进入修复。
+   - Candidate Run 已冻结 RULE / FAST / COGNITION ranking mode，校准统计按 mode 隔离。
+   - 状态：已修复并有回归测试。
 
 3. **SQLite Web 并发边界**
-   - 当前 Web App 长期持有一个 SQLite connection；
-   - 本地单用户压力不高，但异步前端请求与长模型调用可能造成事务交叉风险。
-   - 目标：逐步切换到 request-scoped connections / 明确写事务边界。
+   - Web API 已从全局共享 connection 改为 request-scoped connection；
+   - 长模型调用与前端并发请求不再共享事务状态。
+   - 状态：已修复，并有 API 生命周期测试。
 
 #### P1：可维护性
 
-1. `frontend/src/App.tsx` 已承担过多页面职责；
-2. `web.py` 同时承担 API contract、路由和业务调用；
-3. `content.py` 同时承担 Document、AI Edit、Media、Platform、Publish。
+1. 前端已完成第一轮拆分：`App.tsx` 只保留导航与跨页面状态，业务页面下沉到 `frontend/src/views/*`；
+2. 后端已完成第一轮拆分：`web.py` 只作为 composition root，API 分为 `api/editorial.py`、`api/content.py`、`api/ops.py`；
+3. `content.py` 仍同时承担 Document、AI Edit、Media、Platform、Publish，是下一轮主要结构债务。
 
-目标不是为了“漂亮目录”重构，而是在下一次明显新增功能前完成拆分：
+下一步：
 
-- `frontend/src/views/*`
-- `api/read.py / api/editorial.py / api/content.py / api/ops.py`
-- `services/documents.py / services/media.py / services/publishing.py`
-
-拆分必须保持 API 和数据库行为不变，并在 CI 全绿后逐步推进。
+- 拆出 `services/documents.py / services/editing.py / services/media.py / services/publishing.py`；
+- 保持 HTTP API 和 SQLite schema 行为不变；
+- 每次只迁一组职责，CI 全绿后继续。
 
 #### P2：运行与交付
 
@@ -195,7 +194,7 @@ TrendRadar 只服务一个目标：
 
 当前顺序保持：
 
-**P0 正确性与 provenance → 运行稳定 → 前后端模块拆分 → 实际模型校准 → 平台直发。**
+**P0 正确性与 provenance → 运行稳定 → 服务层拆分 → 实际模型校准 → 平台直发。**
 
 暂不为了“功能完整”增加大量外围能力。任何新能力都必须回答两个问题：
 
