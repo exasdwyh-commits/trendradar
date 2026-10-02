@@ -1,136 +1,55 @@
-# 架构基线
+# Architecture
 
-## 一、单一主线原则
-
-TrendRadar 3.1 是唯一产品基线。仓库不承担旧版兼容、历史 UI 回退或旧功能保留义务。
-
-任何模块是否保留，只看它是否直接服务以下闭环：
-
-高质量商业信号 → 认知与趋势 → Research / Thesis → 人机共创 → 多平台发布 → 判断复盘
-
-以下历史产品假设明确不再保留：
-
-- 国内热搜聚合
-- 关键词热度榜
-- 娱乐/体育/泛社会热点
-- 多渠道消息推送
-- Docker/Cherry Studio/MCP 教程型资产
-- “信息越多越好”的大池展示
-- 以热度/榜单位置作为主要价值判断
-
-仓库只服务一个人：商业内容创作者。
-
-## 二、核心数据流
+TrendRadar 写作台 is a single Python service (FastAPI + SQLite) with a React/TypeScript UI. Everything lives in
+`src/trendradar/` and is organised along the data flow, not by technical layer. Since v4.0 the **creation platform**
+(`studio/`) is the core product and the opportunity radar is a data source for it; see [CONTENT_STUDIO.md](CONTENT_STUDIO.md).
 
 ```
-Source Registry
-→ Intelligence
-→ Story Cluster
-→ Candidate
-→ Cognition / Trend
-→ Research / Thesis
-→ Document / Versions / Evidence
-→ Platform Variants / Publications
+sources/        SourceAdapter plugins → RawSignal / RawProduct (unified models, business logic never sees raw formats)
+ingestion/      store (4-layer dedup, aliases) + parallel collection runner + source health
+normalize/      text cleaning, canonical URLs, simhash, pain lexicon (rule_score)
+providers/      llm (slots, budget, telemetry, FixtureLLM), embeddings (API + local fallback), classifier (LLM / rule)
+analysis/       classify stage (cost pyramid step 2)
+clustering/     vector index, pain clusters (persona+origin blocked leader clustering), solution clusters
+trends/         daily snapshots → velocity / acceleration / stage
+market/         semantic product search, supply expansion, product insights, competition profile
+scoring/        deterministic + judgement dimensions, final score
+opportunities/  analyze_cluster (ANALYSIS call, grounding), lifecycle, Today selection, builder brief
+graph/          `edges` relation table (opportunity graph)
+explore/ ask/   query → market map; NL question → DB-grounded answer
+studio/         creation platform: stories (business-story assessment), brief (one-page digest), materials,
+                documents (autosave/versions/restore), ai (grounded writing actions), publishing (variants, export, ledger)
+jobs/           daily pipeline orchestration, brief refresh, demo seed, daily brief, scheduler
+api/            FastAPI app + read models (+ api/studio.py router); web.py ASGI entry; cli.py
+db/             connection, migrations (SQL files, applied in order)
+core/           settings (.env), pipeline config (config/settings.yml), errors, ids, logging, time
 ```
 
-### 1. Source Registry
-高质量来源清单，来源本身有角色和商业 Lane。
+## Key decisions
 
-### 2. Intelligence
-单篇材料。保留来源、发布时间、抓取时间、role、lane、原文 URL、证据质量。
+| Decision | Why |
+|---|---|
+| SQLite + numpy for vectors | Zero-ops local V1. Vectors are BLOBs keyed by `(item, model)`; cosine over an in-memory matrix is fine for <100k rows. Swapping to pgvector later touches only `clustering/index.py`. |
+| Relation table instead of a graph DB | `edges(from_type, from_id, relation, to_type, to_id, weight)` gives us the Opportunity Graph (pain → cluster → opportunity → product → persona) with plain SQL; exportable later. |
+| One opportunity per pain cluster | Prevents the "one card per post" failure mode. Re-analysis updates the card in place (`version++`), human status is preserved. |
+| Cost pyramid | rule filter (free) → FAST classifier (20 signals/call) → embeddings → clustering → evidence gate → one ANALYSIS call per cluster. Only clusters with ≥3 signals and (≥2 sources or velocity ≥3) reach the reasoning model. |
+| Provider slots | `FAST_MODEL`, `ANALYSIS_MODEL`, `EMBEDDING_MODEL`, all OpenAI-compatible. The classifier is an interface (`RuleClassifier` today, LLM-backed when a slot is configured) so it can later be a local model. |
+| Live / Mock separation | `origin` on signals/products, `data_mode` on clusters/opportunities. Dedup and clustering are blocked by origin; the fixture "model" only ever answers for mock data; live clusters without a real model are marked `analysis_status='skipped'`. |
+| Grounding | Model outputs must reference ids we sent; quotes must appear verbatim in the source text or they are dropped; competitors in a brief must be products we indexed. |
+| Explore sessions | Session-scoped clusters (`pain_clusters.session_id`) so ad-hoc exploration never pollutes the global radar. |
+| Story sources are signals, not pains | Business stories (`sources.kind='story'`) share ingestion/dedup with demand signals but are excluded from pain classification/clustering; they get a `story_assessment` (lane, 值得写的程度, why, angles) instead. |
+| Documents carry evidence | A draft is bound to materials; `data_mode` is derived from those materials, and the AI helper is fixture-only for all-demo drafts and refuses (503) for live drafts without a writing model. |
+| Versions are full snapshots | Simple, diff-free restore; autosave snapshots at most every 15 min, manual/AI/restore always. |
 
-### 3. Story Cluster
-多篇报道同一事件只算一个事件。来源数量不等于独立事件数量。
+## Request/Job flow
 
-### 4. Candidate
-同一个事件同时产生两个互不相加的判断：
-- cognition_score：值不值得进入长期世界模型
-- content_score：值不值得写公众号
+* `trendradar serve` runs FastAPI; each request opens its own SQLite connection (WAL, FK on).
+* Long jobs (`daily`, `collect`, `seed`, `brief`) run in a background thread started from `POST /api/jobs/run`; one at a time.
+* `trendradar daemon` / `serve --scheduler` runs the daily pipeline at `DAILY_HOUR` in `TIMEZONE`.
 
-### 5. Cognition / Trend
-认知线负责更新趋势、支持证据、反证、revision 和 world model。
+## Data model (39 tables, see `db/migrations/0001_init.sql` … `0003_studio.sql`)
 
-### 6. Research / Thesis
-内容线进入研究包与核心观点确认。未经人工确认的 Thesis 不进入正式创作。
-
-### 7. Document / Versions / Evidence
-母稿是长期资产，保存结构化内容、HTML、纯文本、版本历史与证据关系。
-
-### 8. Platform Variants / Publications
-母稿适配公众号、小红书、知乎、头条等平台；发布状态、URL 与后续指标独立记录。
-
-## 三、质量与评估层
-
-### Source Quality
-来源不是平权列表。每个来源具有：
-
-- tier
-- reliability
-- business_value
-- noise
-- accuracy
-- max_per_round
-
-T1/T2 是核心事实与验证源；T3 是行业补充；T4 Discovery 只负责发现线索，不允许独立支撑高置信结论。
-
-### Candidate Run
-每个日轮次在模型筛选后冻结候选状态，同时保存 content_rank 与 cognition_rank。历史评估读取 frozen run，而不是读取今天已经被重新计算过的 candidate。
-
-### Blind 10→3
-盲评界面只显示题目和事件摘要。人工先选 3 条，提交以后才揭晓系统 TOP3。14 天窗口的命中率用于判断“选题系统有没有更接近人”，不用于证明观点真假。
-
-### AI Gateway
-模型调用统一经过 Gateway：
-
-- OpenAI-compatible slots
-- 429 / 5xx / transport retry
-- Retry-After
-- attempts / retries
-- input / output tokens
-- duration / HTTP status
-- failure telemetry
-
-日任务中的 FAST、COGNITION、World Model 允许降级；交互式 Research / Writer / Critic 失败则明确返回错误，不伪造结果。
-
-### Publication Snapshot
-AI生成内容必须通过 Challenger 才能标记发布；自主空白稿保持用户控制权。发布时冻结当时的 Document、Thesis、Research、Evidence、Variant 与 Publication。
-
-## 四、趋势身份
-
-模型每次不能自由发明趋势名。
-
-输入必须带当前 ACTIVE/DRAFT 趋势列表，输出只能：
-- MATCH_EXISTING(trend_id)
-- PROPOSE_NEW
-
-新趋势要求至少两个独立事件，且最好来自不同主体；否则保留 DRAFT。
-
-## 五、模型槽位
-
-业务代码永远只认槽位，不硬编码模型名。
-
-FAST / COGNITION / RESEARCH / WRITING / CRITIC。
-
-认知失败时不允许规则引擎伪装成认知结果。
-
-## 六、定时
-
-目标固定为 Asia/Shanghai 13:00 每日主轮次。
-
-本地机器 13:00 没开：
-- 下次启动发现今天没有成功轮次
-- 补跑一次
-- 不按照“每 20 小时”漂移
-
-## 七、前台
-
-默认首页只显示 3 条。
-
-后台可以有 10–15 条认知候选，但不能把信息池推给用户。
-
-页面优先级：
-1. 今日重点
-2. 待我决定
-3. 趋势变化
-4. 研究/创作
-5. 专业工具
+signals → signal_classifications, signal_embeddings, pain_signals · pain_clusters(+items) · products → product_embeddings, product_insights, product_clusters(+items) ·
+trend_snapshots · competition_profiles · opportunities → opportunity_scores, opportunity_status_log, evidence, builder_briefs · edges · personas ·
+sources, source_health · jobs, job_steps, ai_runs · reports · explore_sessions, ask_sessions · today_picks (0002).
+story_assessments · brief_items · materials · documents → document_versions, document_materials, platform_variants, publications, ai_actions (0003).

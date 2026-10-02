@@ -1,0 +1,1028 @@
+{
+ "_note": "Pre-authored analysis used ONLY when no ANALYSIS_MODEL/FAST_MODEL is configured (demo seed, tests). Everything derived from it is stored with generated_by='fixture' and data_mode='mock'.",
+ "cases": {
+  "ai_coding_agents": {
+   "signal_external_ids": [
+    "r-aca-01",
+    "r-aca-02",
+    "r-aca-03",
+    "r-aca-04",
+    "r-aca-05",
+    "hn-aca-01",
+    "hn-aca-02",
+    "hn-aca-03",
+    "hn-aca-04",
+    "gh-aca-01",
+    "gh-aca-02",
+    "gh-aca-03"
+   ],
+   "product_external_ids": [
+    "ph-aca-01",
+    "ph-aca-02",
+    "ph-aca-03",
+    "ph-aca-04",
+    "ph-aca-05"
+   ],
+   "label": "Managing multiple AI coding agent sessions is chaotic",
+   "summary": "Developers running several Claude Code / Codex / Cursor agents in parallel lose track of session state, lose context between repos and sessions, cannot resume crashed sessions, and have no unified view of status, diffs or cost. Workarounds are tmux, spreadsheets, hand-written scripts and markdown memory files.",
+   "persona": "developer",
+   "category": "developer_tools",
+   "pain_signals": {
+    "r-aca-01": {
+     "problem": "No unified view of what multiple concurrent coding agents are doing; conflicting edits go unnoticed",
+     "context": "Three Claude Code sessions across three repos",
+     "severity": 82,
+     "frequency": 90,
+     "willingness_to_pay": 70,
+     "existing_workaround": "Notion page tracking each session",
+     "current_solution": "none",
+     "friction": [
+      "fragmented",
+      "unreliable"
+     ],
+     "evidence_quote": "I constantly lose track of which agent is doing what"
+    },
+    "r-aca-02": {
+     "problem": "Project context is lost between sessions; time and tokens wasted re-explaining the codebase",
+     "context": "Switching projects with Claude Code",
+     "severity": 85,
+     "frequency": 95,
+     "willingness_to_pay": 85,
+     "existing_workaround": "CLAUDE.md and personal notes",
+     "current_solution": "none",
+     "friction": [
+      "repetitive",
+      "expensive"
+     ],
+     "evidence_quote": "I would pay for something that persists project memory across sessions and repos properly"
+    },
+    "r-aca-03": {
+     "problem": "Parallel agents managed with ad-hoc tmux panes, spreadsheets and scripts",
+     "context": "Codex + Claude Code + Cursor in git worktrees",
+     "severity": 70,
+     "frequency": 90,
+     "willingness_to_pay": 60,
+     "existing_workaround": "tmux, spreadsheet, custom Slack ping script",
+     "current_solution": "self-built script",
+     "friction": [
+      "fragmented",
+      "unreliable"
+     ],
+     "evidence_quote": "It works but it is duct tape"
+    },
+    "r-aca-04": {
+     "problem": "Crashed or closed sessions lose all accumulated plan and state; no resume",
+     "context": "Laptop sleep killed session",
+     "severity": 88,
+     "frequency": 60,
+     "willingness_to_pay": 70,
+     "existing_workaround": "none",
+     "current_solution": "none",
+     "friction": [
+      "unreliable"
+     ],
+     "evidence_quote": "No way to resume, no transcript I could feed back in"
+    },
+    "r-aca-05": {
+     "problem": "Reviewing output of several parallel agents requires manually correlating prompts, transcripts and diffs",
+     "context": "Four agents producing four branches",
+     "severity": 72,
+     "frequency": 80,
+     "willingness_to_pay": 65,
+     "existing_workaround": "Opening four PRs manually",
+     "current_solution": "none",
+     "friction": [
+      "repetitive",
+      "slow"
+     ],
+     "evidence_quote": "would save me an hour a day"
+    },
+    "hn-aca-01": {
+     "problem": "Agent context does not carry across repos; decisions get re-derived every session",
+     "context": "Multi-repo development",
+     "severity": 78,
+     "frequency": 90,
+     "willingness_to_pay": 60,
+     "existing_workaround": "Script that dumps and re-injects a session summary",
+     "current_solution": "self-built script",
+     "friction": [
+      "repetitive",
+      "unreliable"
+     ],
+     "evidence_quote": "I keep losing agent context between repos"
+    },
+    "hn-aca-02": {
+     "problem": "Teams have no visibility into what each engineer's agents are doing; conflicting refactors",
+     "context": "Five engineers each running multiple agents",
+     "severity": 86,
+     "frequency": 85,
+     "willingness_to_pay": 90,
+     "existing_workaround": "none",
+     "current_solution": "none",
+     "friction": [
+      "fragmented"
+     ],
+     "evidence_quote": "We'd happily pay per seat for visibility into agent sessions the way we pay for CI"
+    },
+    "hn-aca-03": {
+     "problem": "Juggling multiple agent sessions destroys focus and loses work",
+     "context": "Author built a tmux wrapper as workaround",
+     "severity": 75,
+     "frequency": 90,
+     "willingness_to_pay": 55,
+     "existing_workaround": "Custom tmux wrapper",
+     "current_solution": "self-built script",
+     "friction": [
+      "fragmented"
+     ],
+     "evidence_quote": "juggling multiple Claude Code and Codex sessions was killing my focus"
+    },
+    "hn-aca-04": {
+     "problem": "No per-session cost and token visibility across agents",
+     "context": "Unexpected $40 daily spend",
+     "severity": 70,
+     "frequency": 80,
+     "willingness_to_pay": 80,
+     "existing_workaround": "none",
+     "current_solution": "none",
+     "friction": [
+      "expensive"
+     ],
+     "evidence_quote": "Per-session token and cost tracking across agents would be the feature that makes me pay"
+    },
+    "gh-aca-01": {
+     "problem": "No durable, editable per-project memory; agents re-ask the same questions",
+     "context": "Feature request on agent repo",
+     "severity": 76,
+     "frequency": 90,
+     "willingness_to_pay": 50,
+     "existing_workaround": "Hand-maintained markdown files",
+     "current_solution": "none",
+     "friction": [
+      "repetitive"
+     ],
+     "evidence_quote": "Each new session re-reads the repo and re-asks the same clarifying questions"
+    },
+    "gh-aca-02": {
+     "problem": "No checkpoints; process death loses plan and tool state",
+     "context": "Happens every couple of days",
+     "severity": 84,
+     "frequency": 70,
+     "willingness_to_pay": 55,
+     "existing_workaround": "none",
+     "current_solution": "none",
+     "friction": [
+      "unreliable"
+     ],
+     "evidence_quote": "This happens to me every couple of days"
+    },
+    "gh-aca-03": {
+     "problem": "Cannot see which concurrent agent runs are blocked waiting for approval",
+     "context": "Several worktrees at once",
+     "severity": 68,
+     "frequency": 85,
+     "willingness_to_pay": 50,
+     "existing_workaround": "Tabbing through terminals",
+     "current_solution": "none",
+     "friction": [
+      "fragmented",
+      "slow"
+     ],
+     "evidence_quote": "impossible to see which runs are blocked waiting on approval"
+    }
+   },
+   "opportunity": {
+    "title": "AI Coding Session Manager",
+    "description": "A local-first control plane for developers who run several terminal coding agents at once: unified session status, persistent per-project memory injected into any agent, crash-safe checkpoints with resume, side-by-side review of agent branches, and per-session cost tracking.",
+    "target_user": "Developers and small teams running Claude Code, Codex CLI or Cursor agents in parallel across repos",
+    "core_pain": "Parallel agent sessions are unmanageable: state, context, cost and output are scattered across terminals and lost between sessions",
+    "proposed_solution": "Mac/Linux desktop app + CLI shim that wraps existing agents (no new agent), records transcripts and checkpoints, maintains an editable project memory, and shows a single board of sessions with status, branch, diff and spend",
+    "wedge": "Crash-safe resume plus multi-agent (not single-vendor) support — the two most repeated complaints about existing tools",
+    "monetization": "Free for 2 sessions; $12/month Pro for unlimited sessions, memory sync and cost reports; team seats later",
+    "distribution": "Show HN, r/ClaudeAI and r/cursor, Claude Code / Codex community Discords, GitHub README of the CLI shim",
+    "build_type": "mac",
+    "build_difficulty": "2_weeks",
+    "why_now": "Parallel-agent workflows (worktrees, multiple CLIs) became mainstream in the last quarter; complaints cluster across Reddit, HN and GitHub within the same week and existing products are single-vendor or enterprise-only",
+    "competitor_weakness": "AgentDeck is Claude-only and Mac-only; Worktree Pilot lacks status/resume; ContextVault ignores concurrency; Swarm Console is enterprise-priced; Sessionly supports one agent",
+    "risks": [
+     "Agent vendors ship native session management",
+     "Terminal wrapping breaks with agent updates",
+     "Solo developers may accept duct-tape workflows"
+    ],
+    "next_action": "Ship a CLI shim that records + resumes Claude Code and Codex sessions; post to HN with a 60-second demo; measure resume usage and Pro conversion"
+   },
+   "model_scores": {
+    "pain": {
+     "score": 86,
+     "reason": "Users describe lost work, wasted hours and daily friction; multiple report building their own scripts, which signals severity.",
+     "evidence": [
+      "r-aca-04",
+      "r-aca-02",
+      "hn-aca-03"
+     ]
+    },
+    "gap": {
+     "score": 84,
+     "reason": "Five products each cover one slice (dashboard, worktrees, memory, enterprise, resume); none combine multi-agent status, memory and resume; complaints about existing tools repeat the same gaps.",
+     "evidence": [
+      "ph-aca-01",
+      "ph-aca-02",
+      "ph-aca-03"
+     ]
+    },
+    "monetization": {
+     "score": 74,
+     "reason": "Explicit willingness to pay per seat and for cost tracking; developer tools with clear time savings support $10–20/month.",
+     "evidence": [
+      "hn-aca-02",
+      "hn-aca-04",
+      "r-aca-02"
+     ]
+    },
+    "build_ease": {
+     "score": 88,
+     "reason": "Wrapping local CLIs, storing transcripts and rendering a board needs no proprietary data or partnerships; a solid MVP fits in two weeks.",
+     "evidence": [
+      "hn-aca-03"
+     ]
+    },
+    "distribution": {
+     "score": 72,
+     "reason": "Target users concentrate in a handful of subreddits, HN and Discords where similar Show HN posts already get hundreds of points.",
+     "evidence": [
+      "hn-aca-01",
+      "hn-aca-03"
+     ]
+    }
+   },
+   "builder_brief": {
+    "problem_definition": "Developers running multiple terminal coding agents lose session state, project context and cost visibility; work is lost on crashes and output is hard to review.",
+    "target_user": "Solo developers and 2–10 person teams using Claude Code, Codex CLI or Cursor agents daily.",
+    "jtbd": "When I run several coding agents in parallel, I want to see, resume and review all of them from one place so I never lose work or context and always know what they cost.",
+    "mvp": "CLI shim (`radar run claude …`) that records transcripts + checkpoints, plus a local web board listing sessions with status, branch, last message, spend, and one-click resume.",
+    "core_features": [
+     "Session board (idle/working/waiting/failed)",
+     "Crash-safe checkpoint + resume",
+     "Editable per-project memory injected on start",
+     "Per-session token/cost tracking",
+     "Branch diff view linked to prompt"
+    ],
+    "pricing_idea": "Free (2 sessions) → Pro $12/month → Team $20/seat.",
+    "competitors": [
+     "AgentDeck",
+     "Worktree Pilot",
+     "ContextVault",
+     "Swarm Console",
+     "Sessionly"
+    ],
+    "differentiation": "Multi-agent, local-first, resume-first; not tied to one vendor and not enterprise-gated.",
+    "technical_difficulty": "Medium-low: PTY wrapping, SQLite storage, small web UI; agent-specific quirks are the main risk.",
+    "recommended_stack": "Rust or Go CLI shim, SQLite, local web UI (Svelte/React), optional Tauri shell for Mac.",
+    "go_to_market": "Show HN + Reddit launch with a resume-a-crashed-session demo; open-source the shim, sell the board.",
+    "validation_plan": "Landing page + waitlist this week; 20 user interviews from the source threads; ship shim in 10 days; success = 100 weekly active boards and 5% Pro conversion within 30 days."
+   }
+  },
+  "freelancer_workflow": {
+   "signal_external_ids": [
+    "r-fw-01",
+    "r-fw-02",
+    "r-fw-03",
+    "r-fw-04",
+    "hn-fw-01",
+    "hn-fw-02",
+    "hn-fw-03",
+    "gh-fw-01",
+    "gh-fw-02"
+   ],
+   "product_external_ids": [
+    "ph-fw-01",
+    "ph-fw-02",
+    "ph-fw-03",
+    "ph-fw-04"
+   ],
+   "label": "Solo freelancers waste hours each week on repetitive admin across fragmented tools",
+   "summary": "Freelancers copy hours into invoices by hand, re-type client details across proposal/contract/invoice tools, manually chase late payments and assemble recurring client reports. Existing suites are priced and designed for agencies; solo users build scripts and Zapier flows that break.",
+   "persona": "freelancer",
+   "category": "productivity",
+   "pain_signals": {
+    "r-fw-01": {
+     "problem": "Weekly manual copying of tracked hours into invoices plus manual payment chasing",
+     "context": "Designer using Toggl, Wave and Notion",
+     "severity": 75,
+     "frequency": 95,
+     "willingness_to_pay": 70,
+     "existing_workaround": "Manual copy every Friday",
+     "current_solution": "Toggl + Wave + Notion",
+     "friction": [
+      "repetitive",
+      "fragmented",
+      "expensive"
+     ],
+     "evidence_quote": "It's maybe three hours a week of pure admin"
+    },
+    "r-fw-02": {
+     "problem": "Repeatedly writing awkward late-payment reminder emails",
+     "context": "Four chronically late clients",
+     "severity": 80,
+     "frequency": 85,
+     "willingness_to_pay": 80,
+     "existing_workaround": "Zapier flow that broke",
+     "current_solution": "none",
+     "friction": [
+      "repetitive",
+      "unreliable"
+     ],
+     "evidence_quote": "I'd pay for something that just politely chases people for me"
+    },
+    "r-fw-03": {
+     "problem": "Proposal, contract and invoice live in different tools; client data re-typed three times",
+     "context": "Onboarding each new client",
+     "severity": 68,
+     "frequency": 70,
+     "willingness_to_pay": 65,
+     "existing_workaround": "Manual re-entry",
+     "current_solution": "Bonsai considered but too expensive",
+     "friction": [
+      "fragmented",
+      "expensive"
+     ],
+     "evidence_quote": "Just want the solo version"
+    },
+    "r-fw-04": {
+     "problem": "Monthly client reporting is a full manual day of exports and paste",
+     "context": "Ads freelancer with six clients",
+     "severity": 72,
+     "frequency": 75,
+     "willingness_to_pay": 60,
+     "existing_workaround": "Manual Google Doc",
+     "current_solution": "none",
+     "friction": [
+      "repetitive",
+      "slow"
+     ],
+     "evidence_quote": "It is the most repetitive thing I do"
+    },
+    "hn-fw-01": {
+     "problem": "Admin stack is spreadsheets and hand-typed invoices because tools target agencies",
+     "context": "Contract developer",
+     "severity": 70,
+     "frequency": 90,
+     "willingness_to_pay": 65,
+     "existing_workaround": "Spreadsheet + calendar reminders",
+     "current_solution": "Stripe invoices by hand",
+     "friction": [
+      "expensive",
+      "fragmented"
+     ],
+     "evidence_quote": "built for 10-person agencies and priced accordingly"
+    },
+    "hn-fw-02": {
+     "problem": "Wrote a weekend script to generate invoices and follow-up schedule from a time log",
+     "context": "Self-built workaround",
+     "severity": 65,
+     "frequency": 90,
+     "willingness_to_pay": 55,
+     "existing_workaround": "Python script",
+     "current_solution": "self-built script",
+     "friction": [
+      "repetitive"
+     ],
+     "evidence_quote": "the pain is very real and very repetitive"
+    },
+    "hn-fw-03": {
+     "problem": "Context switching across hours, expenses, receipts and tax apps",
+     "context": "Solo money loop",
+     "severity": 74,
+     "frequency": 90,
+     "willingness_to_pay": 75,
+     "existing_workaround": "Multiple apps",
+     "current_solution": "none",
+     "friction": [
+      "fragmented"
+     ],
+     "evidence_quote": "I would pay a reasonable monthly fee for one boring tool that owns the whole solo-freelancer money loop"
+    },
+    "gh-fw-01": {
+     "problem": "Open-source invoicing lacks automatic overdue reminders",
+     "context": "OSS invoicing user",
+     "severity": 60,
+     "frequency": 80,
+     "willingness_to_pay": 40,
+     "existing_workaround": "Manual checklist",
+     "current_solution": "open-source invoicing tool",
+     "friction": [
+      "repetitive"
+     ],
+     "evidence_quote": "instead of me remembering to click send"
+    },
+    "gh-fw-02": {
+     "problem": "Time entries must be copied by hand into invoices",
+     "context": "OSS invoicing user",
+     "severity": 62,
+     "frequency": 90,
+     "willingness_to_pay": 40,
+     "existing_workaround": "Manual copy",
+     "current_solution": "open-source invoicing tool",
+     "friction": [
+      "repetitive"
+     ],
+     "evidence_quote": "the most repetitive step in my week"
+    }
+   },
+   "opportunity": {
+    "title": "Solo Freelancer Money Loop",
+    "description": "A deliberately small tool that owns the solo freelancer's weekly money loop: import tracked time, generate the invoice, send it, chase it politely on a schedule, and keep the client's details from proposal to payment — priced for one person, not an agency.",
+    "target_user": "Solo freelancers (design, dev, marketing) billing 3–10 clients",
+    "core_pain": "Hours of repetitive weekly admin across fragmented tools and manual payment chasing",
+    "proposed_solution": "Web app with Toggl/Clockify/CSV import, invoice generation, Stripe/PayPal links, per-client reminder cadences, lightweight proposal→contract→invoice hand-off",
+    "wedge": "Time-import plus automatic chasing in one place at a solo price point; existing tools do either invoicing or reminders, or bundle both into $59/month agency suites",
+    "monetization": "$9/month flat or 1% of collected invoices, whichever is lower; no per-client pricing",
+    "distribution": "r/freelance, Indie Hackers, Toggl/Clockify community, SEO on 'freelance invoice reminder' queries",
+    "build_type": "web",
+    "build_difficulty": "1_3_months",
+    "why_now": "Freelancers are consolidating tools under cost pressure; complaints about agency-priced suites and broken Zapier flows recur across Reddit and HN; payment-rail APIs make the reminder loop cheap to build",
+    "competitor_weakness": "SoloLedger lacks the proposal step and imports; InvoiceNudge only chases; ClientLoop is agency-priced and heavy; ReportRobot covers reporting only",
+    "risks": [
+     "Crowded invoicing category with low switching motivation",
+     "Payment integrations and tax rules per country",
+     "Free tiers from incumbents"
+    ],
+    "next_action": "Validate with a Toggl→invoice→reminder concierge for 15 freelancers from the source threads; measure willingness to pay $9/month"
+   },
+   "model_scores": {
+    "pain": {
+     "score": 78,
+     "reason": "Repetitive weekly admin of several hours and chronic late payments are described consistently; multiple users built scripts.",
+     "evidence": [
+      "r-fw-01",
+      "r-fw-02",
+      "hn-fw-02"
+     ]
+    },
+    "gap": {
+     "score": 66,
+     "reason": "Category is served, but solo-priced integration of time import + chasing + light proposals is missing; complaints target price and scope of incumbents.",
+     "evidence": [
+      "ph-fw-01",
+      "ph-fw-03",
+      "r-fw-03"
+     ]
+    },
+    "monetization": {
+     "score": 72,
+     "reason": "Direct statements of willingness to pay a modest monthly fee; incumbents prove price points.",
+     "evidence": [
+      "hn-fw-03",
+      "r-fw-02"
+     ]
+    },
+    "build_ease": {
+     "score": 62,
+     "reason": "Invoicing, payments and integrations are well understood but compliance and integration breadth add months.",
+     "evidence": [
+      "hn-fw-02"
+     ]
+    },
+    "distribution": {
+     "score": 68,
+     "reason": "Large, self-identifying freelancer communities and strong search intent.",
+     "evidence": [
+      "hn-fw-01",
+      "r-fw-01"
+     ]
+    }
+   },
+   "builder_brief": {
+    "problem_definition": "Solo freelancers lose several hours a week to manual time-to-invoice work, re-typed client data and payment chasing.",
+    "target_user": "One-person service businesses billing hourly or per project.",
+    "jtbd": "When my week ends, I want my tracked time turned into sent, chased and reconciled invoices without touching three tools.",
+    "mvp": "Toggl/CSV import → invoice PDF + payment link → automatic reminder cadence per client → dashboard of who is late.",
+    "core_features": [
+     "Time import",
+     "Invoice generation with payment links",
+     "Per-client reminder schedules",
+     "Client record reused across proposal/contract/invoice",
+     "Late-payer dashboard"
+    ],
+    "pricing_idea": "$9/month flat; annual $79.",
+    "competitors": [
+     "SoloLedger",
+     "InvoiceNudge",
+     "ClientLoop Suite",
+     "ReportRobot"
+    ],
+    "differentiation": "Solo-only scope and price; time import and chasing as first-class.",
+    "technical_difficulty": "Medium: integrations, PDF generation, email deliverability, payments.",
+    "recommended_stack": "Next.js or Rails, Postgres, Stripe, Resend/Postmark, Toggl API.",
+    "go_to_market": "Content + community: reminder email templates as lead magnet; launch in r/freelance and Indie Hackers.",
+    "validation_plan": "Concierge for 15 users for 4 weeks; success = 8 of 15 convert to paid at $9/month."
+   }
+  },
+  "smb_automation": {
+   "signal_external_ids": [
+    "r-smb-01",
+    "r-smb-02",
+    "r-smb-03",
+    "r-smb-04",
+    "hn-smb-01",
+    "hn-smb-02",
+    "hn-smb-03",
+    "gh-smb-01"
+   ],
+   "product_external_ids": [
+    "ph-smb-01",
+    "ph-smb-02",
+    "ph-smb-03",
+    "ph-smb-04",
+    "ph-smb-05"
+   ],
+   "label": "Non-technical small businesses cannot automate simple recurring tasks",
+   "summary": "Owners of salons, trades, cafes and clinics manually send appointment reminders, review requests, reorder emails and quotes. General automation builders are too complex and expensive; vertical suites are priced for multi-location businesses. They want zero-configuration, industry-specific recipes.",
+   "persona": "small_business_owner",
+   "category": "small_business",
+   "pain_signals": {
+    "r-smb-01": {
+     "problem": "Manually texting daily appointment reminders from a personal phone",
+     "context": "Two-chair salon",
+     "severity": 78,
+     "frequency": 100,
+     "willingness_to_pay": 70,
+     "existing_workaround": "Personal phone every evening",
+     "current_solution": "Booking software add-on too expensive and untrusted number",
+     "friction": [
+      "repetitive",
+      "expensive"
+     ],
+     "evidence_quote": "it eats an hour"
+    },
+    "r-smb-02": {
+     "problem": "Could not configure a review-request automation; too complex for non-technical owner",
+     "context": "Plumbing company tried Zapier",
+     "severity": 72,
+     "frequency": 80,
+     "willingness_to_pay": 65,
+     "existing_workaround": "Office manager sends manually",
+     "current_solution": "Zapier abandoned",
+     "friction": [
+      "complicated",
+      "expensive"
+     ],
+     "evidence_quote": "Too complicated for someone who isn't technical"
+    },
+    "r-smb-03": {
+     "problem": "Manual weekly stock counts and supplier emails; stockouts",
+     "context": "Independent cafe",
+     "severity": 74,
+     "frequency": 85,
+     "willingness_to_pay": 55,
+     "existing_workaround": "Sunday count + email",
+     "current_solution": "none (restaurant apps too big)",
+     "friction": [
+      "expensive",
+      "complicated"
+     ],
+     "evidence_quote": "cost more than my weekly milk bill"
+    },
+    "r-smb-04": {
+     "problem": "Quoting is slow, manual and follow-ups are forgotten",
+     "context": "Landscaping",
+     "severity": 76,
+     "frequency": 85,
+     "willingness_to_pay": 80,
+     "existing_workaround": "Word template + email",
+     "current_solution": "none",
+     "friction": [
+      "slow",
+      "repetitive"
+     ],
+     "evidence_quote": "would win my money instantly"
+    },
+    "hn-smb-01": {
+     "problem": "Every automation tool assumes a marketing department; owners want three simple recipes",
+     "context": "Bakery",
+     "severity": 80,
+     "frequency": 90,
+     "willingness_to_pay": 60,
+     "existing_workaround": "Whiteboard and a relative",
+     "current_solution": "none",
+     "friction": [
+      "complicated"
+     ],
+     "evidence_quote": "There's a huge gap between 'consumer app' and 'enterprise workflow tool' here"
+    },
+    "hn-smb-02": {
+     "problem": "Reminders + review requests only available inside expensive practice suites or via complex setup",
+     "context": "Dental office",
+     "severity": 70,
+     "frequency": 85,
+     "willingness_to_pay": 85,
+     "existing_workaround": "Friend built internal tool",
+     "current_solution": "none",
+     "friction": [
+      "expensive",
+      "complicated"
+     ],
+     "evidence_quote": "They said they'd have paid $50/month for it years ago"
+    },
+    "hn-smb-03": {
+     "problem": "Owners want to tick a box, not build automations",
+     "context": "Observation from builders",
+     "severity": 65,
+     "frequency": 90,
+     "willingness_to_pay": 60,
+     "existing_workaround": "none",
+     "current_solution": "general builders",
+     "friction": [
+      "complicated"
+     ],
+     "evidence_quote": "they want to tick a box that says 'send reminders'"
+    },
+    "gh-smb-01": {
+     "problem": "Open-source booking needs webhook + SMS provider just to send reminders",
+     "context": "Small clinic",
+     "severity": 62,
+     "frequency": 90,
+     "willingness_to_pay": 45,
+     "existing_workaround": "Webhook configuration",
+     "current_solution": "open-source booking tool",
+     "friction": [
+      "complicated"
+     ],
+     "evidence_quote": "A built-in 'remind 24h before' toggle would cover 90% of small businesses"
+    }
+   },
+   "opportunity": {
+    "title": "Zero-Config Automation Recipes for Local Businesses",
+    "description": "A mobile-first app offering a short menu of pre-built, industry-specific automations — appointment reminders from the owner's own number, review requests after a job, low-stock reorder nudges, quote follow-ups — each enabled with one toggle and no workflow builder.",
+    "target_user": "Owner-operated local businesses (salons, trades, cafes, clinics) with 1–5 staff and no technical help",
+    "core_pain": "Simple recurring communications are done by hand because automation tools are too complex or priced for larger businesses",
+    "proposed_solution": "Recipes marketplace over a tiny integration core (calendar, SMS, Google Business Profile, simple inventory list); each recipe is a single screen with sane defaults",
+    "wedge": "Start with reminders + review requests for appointment-based businesses, the two recipes with the most explicit demand and the clearest ROI (no-shows, reviews)",
+    "monetization": "$19/month per location including SMS allowance; annual discount; no per-seat pricing",
+    "distribution": "Local business Facebook groups and r/smallbusiness, booking-tool marketplaces, referral from accountants and POS resellers",
+    "build_type": "mobile",
+    "build_difficulty": "1_3_months",
+    "why_now": "SMS and Google review APIs are commoditised, owners' expectations were raised by consumer apps, and general builders keep getting more complex; the same complaints recur across Reddit, HN and GitHub",
+    "competitor_weakness": "RemindRight lacks reviews; ReviewRocket lacks reminders and has a 3-location minimum; FlowKit Pro is too complex; StockSense is multi-location restaurant scale; QuoteOnSite is trades-only and email-only follow-up",
+    "risks": [
+     "SMS compliance and deliverability per country",
+     "Booking platforms bundling reminders",
+     "Low willingness to switch tools mid-year"
+    ],
+    "next_action": "Interview 10 owners from the source threads; ship reminders + reviews recipes for salons in 6 weeks; target 30 paying locations"
+   },
+   "model_scores": {
+    "pain": {
+     "score": 80,
+     "reason": "Daily manual work with direct revenue impact (no-shows, reviews, stockouts); owners repeatedly abandon existing tools as too complex.",
+     "evidence": [
+      "r-smb-01",
+      "r-smb-02",
+      "hn-smb-01"
+     ]
+    },
+    "gap": {
+     "score": 76,
+     "reason": "Point tools exist for each recipe but nothing bundles the top recipes at single-location price with zero configuration; complaints ask for exactly that combination.",
+     "evidence": [
+      "ph-smb-01",
+      "ph-smb-03",
+      "hn-smb-03"
+     ]
+    },
+    "monetization": {
+     "score": 76,
+     "reason": "Owners quote $40–50/month they would pay; incumbents charge more for partial coverage.",
+     "evidence": [
+      "hn-smb-02",
+      "r-smb-04"
+     ]
+    },
+    "build_ease": {
+     "score": 58,
+     "reason": "Each recipe is simple, but SMS compliance, calendar integrations and mobile polish require a few months.",
+     "evidence": [
+      "hn-smb-02"
+     ]
+    },
+    "distribution": {
+     "score": 58,
+     "reason": "Fragmented, offline-heavy audience; requires partnerships or local-community marketing.",
+     "evidence": [
+      "hn-smb-01"
+     ]
+    }
+   },
+   "builder_brief": {
+    "problem_definition": "Owner-operated local businesses hand-run reminders, review requests, reorders and quote follow-ups because automation tools are too complex or too expensive.",
+    "target_user": "Salons, trades, cafes and clinics with 1–5 staff.",
+    "jtbd": "When I finish today's bookings, I want tomorrow's reminders and today's review requests to just go out from my number without me building anything.",
+    "mvp": "iOS/Android app: connect calendar + phone number → toggle 'reminders' and 'review requests' → daily log of what was sent.",
+    "core_features": [
+     "Reminders from own number",
+     "Review request after visit",
+     "Low-stock reorder nudge",
+     "Quote follow-up nudges",
+     "One-screen setup per recipe"
+    ],
+    "pricing_idea": "$19/month per location incl. 300 SMS.",
+    "competitors": [
+     "RemindRight",
+     "ReviewRocket",
+     "FlowKit Pro",
+     "StockSense",
+     "QuoteOnSite"
+    ],
+    "differentiation": "Recipes, not builders; single-location pricing; owner's own number.",
+    "technical_difficulty": "Medium: telephony/SMS compliance, calendar sync, mobile app.",
+    "recommended_stack": "React Native/Expo, Supabase, Twilio, Google Calendar + Business Profile APIs.",
+    "go_to_market": "Salon and trades Facebook groups, booking-tool marketplaces, accountant referrals.",
+    "validation_plan": "10 interviews → 6-week salon pilot with 30 locations; success = 20 paying after pilot and measurable no-show reduction."
+   }
+  }
+ },
+ "product_insights": {
+  "ph-aca-01": {
+   "pros": [
+    "Unified session board",
+    "Transcript search"
+   ],
+   "cons": [
+    "Claude-only",
+    "Mac-only",
+    "Cost per session not per project"
+   ],
+   "review_summary": "Loved as a first dashboard for agent sessions; criticised for single-vendor and Mac-only support.",
+   "complaints": [
+    "Only works with Claude Code",
+    "Mac only",
+    "No persistent project memory"
+   ]
+  },
+  "ph-aca-02": {
+   "pros": [
+    "Worktree isolation"
+   ],
+   "cons": [
+    "Fiddly setup",
+    "No session status",
+    "Expensive for solo"
+   ],
+   "review_summary": "Solid isolation model but weak on status visibility and price.",
+   "complaints": [
+    "Breaks on monorepos",
+    "No waiting-on-input view",
+    "Pricing steep"
+   ]
+  },
+  "ph-aca-03": {
+   "pros": [
+    "Addresses context loss"
+   ],
+   "cons": [
+    "Memory goes stale",
+    "No concurrency support",
+    "Hard integration"
+   ],
+   "review_summary": "Right problem, but memory management and setup friction limit adoption.",
+   "complaints": [
+    "Stale memory",
+    "No multi-session support",
+    "Custom MCP setup"
+   ]
+  },
+  "ph-aca-04": {
+   "pros": [
+    "Approvals and audit logs"
+   ],
+   "cons": [
+    "Enterprise-only pricing"
+   ],
+   "review_summary": "Powerful for large teams; inaccessible for individuals.",
+   "complaints": [
+    "Annual minimum contract",
+    "Overkill for small teams"
+   ]
+  },
+  "ph-aca-05": {
+   "pros": [
+    "Simple resume"
+   ],
+   "cons": [
+    "One agent at a time"
+   ],
+   "review_summary": "Focused resume utility, early stage.",
+   "complaints": [
+    "Single agent only"
+   ]
+  },
+  "ph-fw-01": {
+   "pros": [
+    "Replaces several tools",
+    "Automatic chasing"
+   ],
+   "cons": [
+    "No proposals/contracts",
+    "No Toggl import",
+    "Reminders not per client"
+   ],
+   "review_summary": "Strong solo invoicing core with gaps upstream and in imports.",
+   "complaints": [
+    "No proposal step",
+    "No time import",
+    "Reminder templates not customisable"
+   ]
+  },
+  "ph-fw-02": {
+   "pros": [
+    "Faster payments"
+   ],
+   "cons": [
+    "Reminders only",
+    "Tiny free tier"
+   ],
+   "review_summary": "Effective single-purpose reminder tool.",
+   "complaints": [
+    "Nothing upstream of reminders",
+    "Free tier too small"
+   ]
+  },
+  "ph-fw-03": {
+   "pros": [
+    "Complete suite"
+   ],
+   "cons": [
+    "Expensive for solo",
+    "Heavy onboarding"
+   ],
+   "review_summary": "Agency-grade suite that solo users find bloated and costly.",
+   "complaints": [
+    "$59/month",
+    "Weekend onboarding",
+    "Uses 20% of features"
+   ]
+  },
+  "ph-fw-04": {
+   "pros": [
+    "Saves reporting time"
+   ],
+   "cons": [
+    "Generic summaries",
+    "Per-client pricing"
+   ],
+   "review_summary": "Useful but output needs heavy editing.",
+   "complaints": [
+    "Generic summaries",
+    "Per-client cost"
+   ]
+  },
+  "ph-smb-01": {
+   "pros": [
+    "Own-number reminders",
+    "Easy setup"
+   ],
+   "cons": [
+    "No review requests"
+   ],
+   "review_summary": "Well-liked reminder tool missing adjacent recipes.",
+   "complaints": [
+    "Needs separate review tool"
+   ]
+  },
+  "ph-smb-02": {
+   "pros": [
+    "Very flexible"
+   ],
+   "cons": [
+    "Too complex for small shops",
+    "Expensive at scale",
+    "Fragile workflows"
+   ],
+   "review_summary": "Powerful general builder that non-technical owners abandon.",
+   "complaints": [
+    "Gave up",
+    "Expensive",
+    "Breaks on API changes"
+   ]
+  },
+  "ph-smb-03": {
+   "pros": [
+    "More reviews"
+   ],
+   "cons": [
+    "Reviews only",
+    "3-location minimum"
+   ],
+   "review_summary": "Effective but priced for multi-location.",
+   "complaints": [
+    "No reminders",
+    "Minimum plan too large"
+   ]
+  },
+  "ph-smb-04": {
+   "pros": [
+    "Multi-location inventory"
+   ],
+   "cons": [
+    "Too heavy for single cafe"
+   ],
+   "review_summary": "Restaurant-scale tool, not for independents.",
+   "complaints": [
+    "Too much for one cafe",
+    "Needs a manager"
+   ]
+  },
+  "ph-smb-05": {
+   "pros": [
+    "Phone-first quoting"
+   ],
+   "cons": [
+    "Email-only follow-up",
+    "iOS only"
+   ],
+   "review_summary": "Good trades quoting; follow-up channel and platform gaps.",
+   "complaints": [
+    "No SMS follow-up",
+    "No Android"
+   ]
+  }
+ },
+ "stories": {
+  "st-01": {
+   "lane": "AI_COMMERCIALIZATION",
+   "business_value": 86,
+   "why": "计费单位从 token 变成结果，会改变模型厂商的收入结构和客户的采购逻辑。",
+   "angles": [
+    "按结果计费会不会成为 AI 服务的默认定价方式？",
+    "推理降价 45% 背后：谁在为利润率买单",
+    "企业采购 AI 的三种计费模型比较"
+   ]
+  },
+  "st-02": {
+   "lane": "INDUSTRY",
+   "business_value": 82,
+   "why": "人形机器人第一次以'按小时租赁'进入真实产线，且动因是夜班用工短缺而非替代。",
+   "angles": [
+    "机器人不是替代工人，而是替代招不到的人",
+    "每小时 18 美元：人形机器人的第一张商业价目表",
+    "制造业自动化的利润会流向谁"
+   ]
+  },
+  "st-03": {
+   "lane": "COMPANY",
+   "business_value": 80,
+   "why": "零售商利润引擎切换到自有品牌和零售媒体，品牌商的营销预算会被重新分配。",
+   "angles": [
+    "带货架的媒体公司：零售商的第二增长曲线",
+    "广告收入超过会员费之后，零售商还是零售商吗",
+    "自有品牌 41%：对供应商意味着什么"
+   ]
+  },
+  "st-04": {
+   "lane": "BUSINESS_MODEL",
+   "business_value": 78,
+   "why": "一人公司靠模板市场和会计师推荐做到 300 万美元营收，是低客单价 SaaS 的可复制路径。",
+   "angles": [
+    "49 美元客单价为什么不需要销售团队",
+    "模板市场：让用户帮你做增长",
+    "一人公司的边界在哪里"
+   ]
+  },
+  "st-05": {
+   "lane": "GLOBALIZATION",
+   "business_value": 84,
+   "why": "份额和利润池分离：出海整车厂份额上升但利润集中在本地换电运营商。",
+   "angles": [
+    "出海赢了份额，输了利润池",
+    "换电网络：东南亚两轮车真正的收费站",
+    "本地化率新规会怎样改写出海路线图"
+   ]
+  },
+  "st-06": {
+   "lane": "AI_COMMERCIALIZATION",
+   "business_value": 76,
+   "why": "AI 替代的是外包合同而非员工，是企业 AI ROI 更真实的来源。",
+   "angles": [
+    "企业 AI 的真实 ROI：先替代外包，再谈裁员",
+    "7 个月上线：AI 项目的时间都花在哪",
+    "BPO 行业会是第一个被 AI 重塑的服务业吗"
+   ]
+  },
+  "st-07": {
+   "lane": "INDUSTRY",
+   "business_value": 74,
+   "why": "可中断负载合同改变 AI 基础设施的选址与成本结构。",
+   "angles": [
+    "电价折扣 30%：AI 数据中心的新选址逻辑",
+    "训练负载和推理负载正在分家",
+    "电网正在成为 AI 基建的甲方"
+   ]
+  },
+  "st-08": {
+   "lane": "OTHER",
+   "business_value": 12,
+   "why": "娱乐性产品更新，缺少商业机制变化。",
+   "angles": []
+  }
+ }
+}

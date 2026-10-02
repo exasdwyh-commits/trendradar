@@ -1,19 +1,24 @@
 [project]
 name = "trendradar"
-version = "3.1.0"
-description = "Business cognition, content studio and multi-platform publishing workbench"
+version = "4.0.0"
+description = "TrendRadar 写作台: a creation platform with a business brief, materials and AI-assisted drafting"
 requires-python = ">=3.11"
 dependencies = [
   "beautifulsoup4>=4.12.3",
   "fastapi>=0.115.0",
   "feedparser>=6.0.11",
   "httpx>=0.27.2",
+  "markdown-it-py>=3.0",
+  "numpy>=1.26",
+  "pydantic>=2.7",
+  "pydantic-settings>=2.3",
+  "python-dotenv>=1.0",
   "PyYAML>=6.0.2",
   "uvicorn>=0.30.6",
 ]
 
 [project.optional-dependencies]
-dev = ["pytest>=8.3.0"]
+dev = ["pytest>=8.3.0", "ruff>=0.6", "mypy>=1.10", "types-PyYAML"]
 
 [project.scripts]
 trendradar = "trendradar.cli:main"
@@ -25,6 +30,32 @@ build-backend = "setuptools.build_meta"
 [tool.setuptools.packages.find]
 where = ["src"]
 
+[tool.setuptools.package-data]
+trendradar = ["db/migrations/*.sql", "sources/mock/fixtures/*.json", "sources/mock/fixtures/**/*.json"]
+
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 pythonpath = ["src"]
+# Keep pytest scratch inside the repo: on some Windows setups the system temp / .pytest_cache is
+# not writable for the shell that runs tests. Both paths match `.pytest_tmp*/` in .gitignore.
+addopts = ["--basetemp=.pytest_tmp"]
+cache_dir = ".pytest_tmp_cache"
+filterwarnings = ["ignore::DeprecationWarning"]
+
+[tool.ruff]
+line-length = 110
+target-version = "py311"
+src = ["src", "tests"]
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "B", "UP", "SIM"]
+ignore = ["E501", "B008", "SIM108", "SIM102"]
+
+[tool.mypy]
+# numpy ≥ 2.3 ships stubs with 3.12-only syntax; checking as 3.11 aborts before any project file.
+python_version = "3.12"
+packages = ["trendradar"]
+mypy_path = "src"
+ignore_missing_imports = true
+check_untyped_defs = true
+warn_unused_ignores = false

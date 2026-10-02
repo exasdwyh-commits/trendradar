@@ -1,0 +1,122 @@
+[
+ {
+  "source": "mock-stories",
+  "adapter": "mock",
+  "external_id": "st-01",
+  "url": "https://demo.local/stories/st-01",
+  "title": "Northwind Cloud 把推理 API 价格下调 45%，同时推出按结果计费的 Agent 套餐",
+  "content": "Northwind Cloud 今天宣布其旗舰推理 API 价格下调 45%，并推出名为 Outcome Plan 的 Agent 套餐：客户按成功完成的任务数付费，失败任务不计费。公司称新套餐已在 30 家企业客户中试点三个月，平均把单任务成本降低 60%。公司 CFO 在电话会上表示，推理毛利率仍保持在 55% 以上，价格下调主要由自研芯片和调度效率提升支撑。分析师关注的问题是：当计费单位从 token 变成结果，模型厂商的收入将更依赖任务成功率而非调用量。",
+  "author": "Northwind Cloud 官方博客",
+  "created_days_ago": 0.3,
+  "metadata": {
+   "summary": "虚构的云厂商宣布推理价格大幅下调，并首次尝试按任务完成结果计费，而不是按 token 计费。",
+   "lane": "AI_COMMERCIALIZATION",
+   "demo": true
+  }
+ },
+ {
+  "source": "mock-stories",
+  "adapter": "mock",
+  "external_id": "st-02",
+  "url": "https://demo.local/stories/st-02",
+  "title": "Helix Robotics 与三家汽车零部件厂签约，人形机器人按小时租赁进入产线",
+  "content": "Helix Robotics 宣布与三家汽车零部件供应商签署为期两年的租赁协议，首批 400 台人形机器人将进入焊接前后的物料搬运岗位。租赁价格为每小时 18 美元，包含维护和软件更新。公司表示当前单台机器人的制造成本已降至 6.5 万美元，目标是在 2027 年降到 3 万美元以下。三家客户均表示，签约的主要动因是夜班用工短缺而非直接替代现有工人。",
+  "author": "Helix Robotics 新闻稿",
+  "created_days_ago": 0.8,
+  "metadata": {
+   "summary": "虚构的机器人公司以每小时 18 美元的租赁价把人形机器人部署到零部件产线，首批 400 台。",
+   "lane": "INDUSTRY",
+   "demo": true
+  }
+ },
+ {
+  "source": "mock-stories",
+  "adapter": "mock",
+  "external_id": "st-03",
+  "url": "https://demo.local/stories/st-03",
+  "title": "Meridian Retail 三季度：自有品牌占比升至 41%，广告业务收入首次超过会员费",
+  "content": "Meridian Retail 公布第三季度业绩：营收同比增长 4%，但经营利润增长 19%。管理层把利润增长归因于两点：自有品牌销售占比升至 41%，以及零售媒体广告收入达到 9.2 亿美元，首次超过会员费收入。公司同时宣布将关闭 60 家低效门店，并把节省的资本开支投入配送网络。分析师指出，零售商正在变成'带货架的媒体公司'，这一变化会重塑品牌商的营销预算分配。",
+  "author": "Meridian Retail 财报",
+  "created_days_ago": 1.2,
+  "metadata": {
+   "summary": "虚构零售商财报显示自有品牌和零售媒体广告成为利润主引擎，传统商品毛利持续承压。",
+   "lane": "COMPANY",
+   "demo": true
+  }
+ },
+ {
+  "source": "mock-stories",
+  "adapter": "mock",
+  "external_id": "st-04",
+  "url": "https://demo.local/stories/st-04",
+  "title": "一人公司 Ledgerly 年营收突破 300 万美元：一款给独立顾问用的报价与收款工具",
+  "content": "Ledgerly 创始人在博客中披露，公司年经常性收入突破 300 万美元，团队仍只有她一人加两名兼职客服。产品面向独立顾问和小型事务所，把报价、合同、收款和账期提醒串成一个流程。增长来自两条渠道：用户可以发布并出售自己的报价模板，平台抽成 20%；以及与 1,200 名注册会计师建立的推荐计划。创始人表示拒绝了三轮融资邀约，理由是'客单价 49 美元的产品不需要销售团队'。",
+  "author": "Solo Founder Weekly",
+  "created_days_ago": 1.9,
+  "metadata": {
+   "summary": "虚构的一人 SaaS 公司披露营收细节：不融资、无销售团队，靠模板市场和会计师推荐增长。",
+   "lane": "BUSINESS_MODEL",
+   "demo": true
+  }
+ },
+ {
+  "source": "mock-stories",
+  "adapter": "mock",
+  "external_id": "st-05",
+  "url": "https://demo.local/stories/st-05",
+  "title": "东南亚电动两轮车市场：中国品牌份额升至 38%，但利润集中在换电网络运营商手中",
+  "content": "Eastbridge 研究部发布的报告显示，中国电动两轮车品牌在印尼、越南和泰国的合计市场份额升至 38%，但整车环节的平均毛利率只有 9%。相比之下，运营换电网络的三家本地公司毛利率超过 50%，并开始向整车厂收取接入费。报告认为，出海企业需要决定是继续做整车出口，还是与本地能源和金融伙伴一起进入服务环节。报告还提到，越南新的本地化率要求将在明年生效。",
+  "author": "Eastbridge 研究部",
+  "created_days_ago": 2.4,
+  "metadata": {
+   "summary": "虚构研究报告指出，整车份额与利润池分离：卖车不赚钱，换电服务毛利率超过 50%。",
+   "lane": "GLOBALIZATION",
+   "demo": true
+  }
+ },
+ {
+  "source": "mock-stories",
+  "adapter": "mock",
+  "external_id": "st-06",
+  "url": "https://demo.local/stories/st-06",
+  "title": "一家 200 人的保险经纪公司用 AI 处理 70% 的理赔材料初审，人力成本下降 30%",
+  "content": "案例显示，这家保险经纪公司此前把理赔材料初审外包给一家 BPO 公司，年费用约 240 万美元。引入 AI 初审后，70% 的材料无需人工介入，外包合同缩减到原来的三分之一。公司强调内部员工数量没有减少，反而新增了 4 个负责规则维护和异常审核的岗位。项目从试点到全面上线用了 7 个月，主要时间花在与旧系统对接和监管合规审查上。",
+  "author": "Northwind Cloud 客户案例",
+  "created_days_ago": 3.1,
+  "metadata": {
+   "summary": "虚构客户案例：AI 初审替代的是外包环节而非内部员工，节省主要来自外包合同。",
+   "lane": "AI_COMMERCIALIZATION",
+   "demo": true
+  }
+ },
+ {
+  "source": "mock-stories",
+  "adapter": "mock",
+  "external_id": "st-07",
+  "url": "https://demo.local/stories/st-07",
+  "title": "数据中心电力合同出现新结构：可中断负载换取 30% 电价折扣",
+  "content": "多家电网运营商开始向新建数据中心提供'可中断负载'合同：数据中心接受每年最多 100 小时的强制降载，换取约 30% 的电价折扣。文章指出，这类合同最适合训练型负载而非在线推理负载，因此正在改变 AI 基础设施的选址逻辑。一家签约的云厂商表示，折扣电价让其在中西部新建园区的总拥有成本下降了 12%。",
+  "author": "Grid Insights",
+  "created_days_ago": 4.0,
+  "metadata": {
+   "summary": "虚构行业观察：电网运营商向数据中心提供折扣电价，条件是在高峰期允许被中断。",
+   "lane": "INDUSTRY",
+   "demo": true
+  }
+ },
+ {
+  "source": "mock-stories",
+  "adapter": "mock",
+  "external_id": "st-08",
+  "url": "https://demo.local/stories/st-08",
+  "title": "演示条目：某社交平台推出新表情包功能",
+  "content": "某社交平台宣布新增 200 个动态表情包，并推出表情包创作者激励计划。",
+  "author": "Demo Wire",
+  "created_days_ago": 5.5,
+  "metadata": {
+   "summary": "用于演示低价值条目的过滤：娱乐性更新，不进入'值得写'。",
+   "lane": "OTHER",
+   "demo": true
+  }
+ }
+]

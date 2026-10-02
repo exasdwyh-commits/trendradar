@@ -1,0 +1,636 @@
+[
+  {
+    "case": "ai_coding_agents",
+    "source": "mock-reddit",
+    "adapter": "reddit",
+    "external_id": "r-aca-01",
+    "url": "https://demo.local/reddit/aca-01",
+    "title": "Running three Claude Code sessions across repos is chaos",
+    "content": "I have Claude Code open in three terminals for three different repos and I constantly lose track of which agent is doing what. One of them silently overwrote a migration another one had just written. I ended up keeping a Notion page just to remember what each session was asked to do. Is there a tool that gives me one dashboard for all my coding agent sessions?",
+    "author": "devon_k",
+    "created_days_ago": 1,
+    "engagement": {
+      "votes": 184,
+      "comments": 63
+    },
+    "metadata": {
+      "subreddit": "ClaudeAI"
+    }
+  },
+  {
+    "case": "ai_coding_agents",
+    "source": "mock-reddit",
+    "adapter": "reddit",
+    "external_id": "r-aca-02",
+    "url": "https://demo.local/reddit/aca-02",
+    "title": "Every time I switch projects I have to re-explain the whole codebase to the agent",
+    "content": "The context just evaporates. I wrote a CLAUDE.md, I keep notes, but every new session starts from zero and I burn 20 minutes and a bunch of tokens re-establishing context. I hate this. I would pay for something that persists project memory across sessions and repos properly.",
+    "author": "mira.builds",
+    "created_days_ago": 1,
+    "engagement": {
+      "votes": 231,
+      "comments": 88
+    },
+    "metadata": {
+      "subreddit": "ClaudeAI"
+    }
+  },
+  {
+    "case": "ai_coding_agents",
+    "source": "mock-reddit",
+    "adapter": "reddit",
+    "external_id": "r-aca-03",
+    "url": "https://demo.local/reddit/aca-03",
+    "title": "Anyone else managing Codex + Claude Code + Cursor agents with tmux and prayer?",
+    "content": "I run parallel agents in git worktrees. tmux panes, a spreadsheet of branch names, and a script I wrote that pings me on Slack when a session goes idle. It works but it is duct tape. Feels like there should be a proper 'agent manager' by now.",
+    "author": "tmux_enjoyer",
+    "created_days_ago": 3,
+    "engagement": {
+      "votes": 97,
+      "comments": 41
+    },
+    "metadata": {
+      "subreddit": "ExperiencedDevs"
+    }
+  },
+  {
+    "case": "ai_coding_agents",
+    "source": "mock-reddit",
+    "adapter": "reddit",
+    "external_id": "r-aca-04",
+    "url": "https://demo.local/reddit/aca-04",
+    "title": "Lost two hours of agent work because the session died and nothing was saved",
+    "content": "Laptop went to sleep, the Claude Code session was gone, and the plan it had built up across forty messages was gone with it. No way to resume, no transcript I could feed back in. Why is there no session persistence and restore for these tools?",
+    "author": "qa_gremlin",
+    "created_days_ago": 2,
+    "engagement": {
+      "votes": 142,
+      "comments": 37
+    },
+    "metadata": {
+      "subreddit": "ClaudeAI"
+    }
+  },
+  {
+    "case": "ai_coding_agents",
+    "source": "mock-reddit",
+    "adapter": "reddit",
+    "external_id": "r-aca-05",
+    "url": "https://demo.local/reddit/aca-05",
+    "title": "How do you review what 4 parallel agents changed without going insane?",
+    "content": "Each agent produces a branch. I have to open four PRs, remember which prompt produced which one, and diff them against each other. A single review surface that ties the prompt, the transcript and the diff together would save me an hour a day.",
+    "author": "shipfast_sam",
+    "created_days_ago": 5,
+    "engagement": {
+      "votes": 76,
+      "comments": 22
+    },
+    "metadata": {
+      "subreddit": "cursor"
+    }
+  },
+  {
+    "case": "ai_coding_agents",
+    "source": "mock-hn",
+    "adapter": "hackernews",
+    "external_id": "hn-aca-01",
+    "url": "https://demo.local/hn/aca-01",
+    "title": "Ask HN: How do you keep agent context between repos?",
+    "content": "I keep losing agent context between repos. The same architectural decisions get re-derived in every session. I ended up writing a small script that dumps a summary at the end of each session and injects it into the next one, but it's fragile. Curious what others do.",
+    "author": "pg_fan_42",
+    "created_days_ago": 2,
+    "engagement": {
+      "votes": 312,
+      "comments": 141
+    },
+    "metadata": {
+      "hn_type": "story"
+    }
+  },
+  {
+    "case": "ai_coding_agents",
+    "source": "mock-hn",
+    "adapter": "hackernews",
+    "external_id": "hn-aca-02",
+    "url": "https://demo.local/hn/aca-02",
+    "title": "Ask HN: How do you keep agent context between repos?",
+    "content": "Same problem here but multiplied: we have five engineers each running two or three agents. Nobody knows what the agents are doing and we've had two conflicting refactors land in one week. We'd happily pay per seat for visibility into agent sessions the way we pay for CI.",
+    "author": "eng_manager_throwaway",
+    "created_days_ago": 2,
+    "engagement": {
+      "votes": 88,
+      "comments": 0
+    },
+    "metadata": {
+      "hn_type": "comment"
+    }
+  },
+  {
+    "case": "ai_coding_agents",
+    "source": "mock-hn",
+    "adapter": "hackernews",
+    "external_id": "hn-aca-03",
+    "url": "https://demo.local/hn/aca-03",
+    "title": "Show HN: I wrote a tmux wrapper to babysit my coding agents",
+    "content": "Built this because juggling multiple Claude Code and Codex sessions was killing my focus. It names sessions after branches, shows which are waiting on input, and archives transcripts. Very hacky, but it stopped me from losing work.",
+    "author": "wrapper_author",
+    "created_days_ago": 3,
+    "engagement": {
+      "votes": 154,
+      "comments": 58
+    },
+    "metadata": {
+      "hn_type": "story"
+    }
+  },
+  {
+    "case": "ai_coding_agents",
+    "source": "mock-hn",
+    "adapter": "hackernews",
+    "external_id": "hn-aca-04",
+    "url": "https://demo.local/hn/aca-04",
+    "title": "Show HN: I wrote a tmux wrapper to babysit my coding agents",
+    "content": "The real missing piece is cost. I have no idea which session burned $40 yesterday. Per-session token and cost tracking across agents would be the feature that makes me pay.",
+    "author": "budget_conscious",
+    "created_days_ago": 4,
+    "engagement": {
+      "votes": 41,
+      "comments": 0
+    },
+    "metadata": {
+      "hn_type": "comment"
+    }
+  },
+  {
+    "case": "ai_coding_agents",
+    "source": "mock-github",
+    "adapter": "github_issues",
+    "external_id": "gh-aca-01",
+    "url": "https://demo.local/github/aca-01",
+    "title": "Feature request: persistent project context across sessions",
+    "content": "Need persistent project context. Each new session re-reads the repo and re-asks the same clarifying questions. A durable, editable memory per project that survives restarts would remove most of the friction. Many of us are working around this with hand-maintained markdown files.",
+    "author": "octo-dev",
+    "created_days_ago": 6,
+    "engagement": {
+      "votes": 96,
+      "comments": 29
+    },
+    "metadata": {
+      "repo": "demo/coding-agent",
+      "labels": [
+        "enhancement"
+      ]
+    }
+  },
+  {
+    "case": "ai_coding_agents",
+    "source": "mock-github",
+    "adapter": "github_issues",
+    "external_id": "gh-aca-02",
+    "url": "https://demo.local/github/aca-02",
+    "title": "Resume a crashed session from transcript",
+    "content": "When the process dies there is no way to resume. Please add session checkpoints so a crash or a closed terminal does not lose the plan and the tool state. This happens to me every couple of days.",
+    "author": "resume_please",
+    "created_days_ago": 9,
+    "engagement": {
+      "votes": 61,
+      "comments": 14
+    },
+    "metadata": {
+      "repo": "demo/coding-agent",
+      "labels": [
+        "bug",
+        "enhancement"
+      ]
+    }
+  },
+  {
+    "case": "ai_coding_agents",
+    "source": "mock-github",
+    "adapter": "github_issues",
+    "external_id": "gh-aca-03",
+    "url": "https://demo.local/github/aca-03",
+    "title": "Dashboard for multiple concurrent agent runs",
+    "content": "Running the agent in several worktrees at once. It's impossible to see which runs are blocked waiting on approval. A simple status view across runs (idle / working / waiting / failed) would be enough.",
+    "author": "worktree_wanderer",
+    "created_days_ago": 12,
+    "engagement": {
+      "votes": 44,
+      "comments": 9
+    },
+    "metadata": {
+      "repo": "demo/codex-cli",
+      "labels": [
+        "enhancement"
+      ]
+    }
+  },
+  {
+    "case": "freelancer_workflow",
+    "source": "mock-reddit",
+    "adapter": "reddit",
+    "external_id": "r-fw-01",
+    "url": "https://demo.local/reddit/fw-01",
+    "title": "I spend every Friday afternoon copying hours from Toggl into invoices by hand",
+    "content": "Freelance designer here. Time tracking lives in Toggl, invoices in Wave, client notes in Notion, and every Friday I manually copy entries into an invoice, fix the rounding, and email it. Then I chase payment two weeks later, also manually. It's maybe three hours a week of pure admin. Is there a tool that does the whole loop for solo freelancers without being a $60/month agency suite?",
+    "author": "pixel_freelance",
+    "created_days_ago": 5,
+    "engagement": {
+      "votes": 143,
+      "comments": 71
+    },
+    "metadata": {
+      "subreddit": "freelance"
+    }
+  },
+  {
+    "case": "freelancer_workflow",
+    "source": "mock-reddit",
+    "adapter": "reddit",
+    "external_id": "r-fw-02",
+    "url": "https://demo.local/reddit/fw-02",
+    "title": "Chasing late invoices is the worst part of freelancing",
+    "content": "I have four clients who pay 20-30 days late every single time. I write the same awkward reminder email over and over. I built a Zapier flow for it once and it broke when I changed invoicing tools. I'd pay for something that just politely chases people for me and tells me who is about to be late.",
+    "author": "copy_by_claire",
+    "created_days_ago": 8,
+    "engagement": {
+      "votes": 201,
+      "comments": 94
+    },
+    "metadata": {
+      "subreddit": "freelance"
+    }
+  },
+  {
+    "case": "freelancer_workflow",
+    "source": "mock-reddit",
+    "adapter": "reddit",
+    "external_id": "r-fw-03",
+    "url": "https://demo.local/reddit/fw-03",
+    "title": "Proposal → contract → invoice: why is this still five different tools?",
+    "content": "Every new client means a proposal in one tool, a contract in another, then invoices somewhere else, and I re-type the client's details three times. Bonsai does this but it's expensive and half the features are for agencies I don't need. Just want the solo version.",
+    "author": "solo_dev_shop",
+    "created_days_ago": 11,
+    "engagement": {
+      "votes": 88,
+      "comments": 33
+    },
+    "metadata": {
+      "subreddit": "freelance"
+    }
+  },
+  {
+    "case": "freelancer_workflow",
+    "source": "mock-reddit",
+    "adapter": "reddit",
+    "external_id": "r-fw-04",
+    "url": "https://demo.local/reddit/fw-04",
+    "title": "Monthly client reporting takes me a full day",
+    "content": "I run paid ads for six small clients. Every month I export from three dashboards, paste screenshots into a Google Doc, write the same summary paragraphs, and send it. It is the most repetitive thing I do and clients barely read it, but they churn if they don't get it.",
+    "author": "ads_alex",
+    "created_days_ago": 15,
+    "engagement": {
+      "votes": 67,
+      "comments": 28
+    },
+    "metadata": {
+      "subreddit": "PPC"
+    }
+  },
+  {
+    "case": "freelancer_workflow",
+    "source": "mock-hn",
+    "adapter": "hackernews",
+    "external_id": "hn-fw-01",
+    "url": "https://demo.local/hn/fw-01",
+    "title": "Ask HN: Freelancers, what's your admin stack in 2026?",
+    "content": "Contract dev. My admin is a spreadsheet for hours, Stripe invoices typed by hand, and a calendar reminder to follow up on unpaid ones. I keep meaning to automate it and never do because the tools that exist are built for 10-person agencies and priced accordingly.",
+    "author": "contract_cody",
+    "created_days_ago": 6,
+    "engagement": {
+      "votes": 178,
+      "comments": 122
+    },
+    "metadata": {
+      "hn_type": "story"
+    }
+  },
+  {
+    "case": "freelancer_workflow",
+    "source": "mock-hn",
+    "adapter": "hackernews",
+    "external_id": "hn-fw-02",
+    "url": "https://demo.local/hn/fw-02",
+    "title": "Ask HN: Freelancers, what's your admin stack in 2026?",
+    "content": "I wrote a small Python script that reads my time log and generates a PDF invoice plus a follow-up email schedule. Took a weekend. Sad that this is still the state of the art for solo people; the pain is very real and very repetitive.",
+    "author": "weekend_scripter",
+    "created_days_ago": 6,
+    "engagement": {
+      "votes": 64,
+      "comments": 0
+    },
+    "metadata": {
+      "hn_type": "comment"
+    }
+  },
+  {
+    "case": "freelancer_workflow",
+    "source": "mock-hn",
+    "adapter": "hackernews",
+    "external_id": "hn-fw-03",
+    "url": "https://demo.local/hn/fw-03",
+    "title": "Ask HN: Freelancers, what's your admin stack in 2026?",
+    "content": "Biggest time sink is not invoicing itself, it's the context switching: hours here, expenses there, receipts in email, tax estimate in yet another app. I would pay a reasonable monthly fee for one boring tool that owns the whole solo-freelancer money loop.",
+    "author": "ctx_switch_sufferer",
+    "created_days_ago": 6,
+    "engagement": {
+      "votes": 52,
+      "comments": 0
+    },
+    "metadata": {
+      "hn_type": "comment"
+    }
+  },
+  {
+    "case": "freelancer_workflow",
+    "source": "mock-github",
+    "adapter": "github_issues",
+    "external_id": "gh-fw-01",
+    "url": "https://demo.local/github/fw-01",
+    "title": "Automate recurring invoice reminders",
+    "content": "Using this open-source invoicing tool for my freelance work. It would be great if it could send reminder emails automatically at 3, 7 and 14 days overdue instead of me remembering to click send. I currently keep a manual checklist.",
+    "author": "oss_invoicer",
+    "created_days_ago": 20,
+    "engagement": {
+      "votes": 38,
+      "comments": 12
+    },
+    "metadata": {
+      "repo": "demo/invoice-oss",
+      "labels": [
+        "enhancement"
+      ]
+    }
+  },
+  {
+    "case": "freelancer_workflow",
+    "source": "mock-github",
+    "adapter": "github_issues",
+    "external_id": "gh-fw-02",
+    "url": "https://demo.local/github/fw-02",
+    "title": "Import time entries from Toggl/Clockify into invoices",
+    "content": "Every invoice I create involves copying time entries by hand from my tracker. A direct import (or CSV mapping) would remove the most repetitive step in my week.",
+    "author": "time_importer",
+    "created_days_ago": 26,
+    "engagement": {
+      "votes": 27,
+      "comments": 8
+    },
+    "metadata": {
+      "repo": "demo/invoice-oss",
+      "labels": [
+        "enhancement"
+      ]
+    }
+  },
+  {
+    "case": "smb_automation",
+    "source": "mock-reddit",
+    "adapter": "reddit",
+    "external_id": "r-smb-01",
+    "url": "https://demo.local/reddit/smb-01",
+    "title": "Small salon owner: I text appointment reminders to 40 clients by hand every evening",
+    "content": "I run a two-chair salon. Every evening I go through tomorrow's book and text each client a reminder from my personal phone. No-shows dropped a lot when I started, so I can't stop, but it eats an hour. The booking software I use charges an extra $40/month for reminders and they come from a weird number clients don't trust.",
+    "author": "salon_sara",
+    "created_days_ago": 2,
+    "engagement": {
+      "votes": 156,
+      "comments": 82
+    },
+    "metadata": {
+      "subreddit": "smallbusiness"
+    }
+  },
+  {
+    "case": "smb_automation",
+    "source": "mock-reddit",
+    "adapter": "reddit",
+    "external_id": "r-smb-02",
+    "url": "https://demo.local/reddit/smb-02",
+    "title": "Tried Zapier to automate review requests, gave up after two evenings",
+    "content": "I own a small plumbing company. Wanted to send a Google review request after each completed job. Zapier needed three apps, a paid plan, and a filter step I never got working. My office manager now sends them manually from a template. Too complicated for someone who isn't technical.",
+    "author": "pipes_and_pat",
+    "created_days_ago": 9,
+    "engagement": {
+      "votes": 119,
+      "comments": 54
+    },
+    "metadata": {
+      "subreddit": "smallbusiness"
+    }
+  },
+  {
+    "case": "smb_automation",
+    "source": "mock-reddit",
+    "adapter": "reddit",
+    "external_id": "r-smb-03",
+    "url": "https://demo.local/reddit/smb-03",
+    "title": "Is there a simple tool that reorders stock when it runs low? (cafe owner)",
+    "content": "Independent cafe. I count milk, beans and cups every Sunday and email three suppliers. Twice this month I ran out mid-week. The inventory apps I found are built for restaurants with 50 SKUs and a manager, and cost more than my weekly milk bill.",
+    "author": "cafe_carla",
+    "created_days_ago": 13,
+    "engagement": {
+      "votes": 74,
+      "comments": 39
+    },
+    "metadata": {
+      "subreddit": "smallbusiness"
+    }
+  },
+  {
+    "case": "smb_automation",
+    "source": "mock-reddit",
+    "adapter": "reddit",
+    "external_id": "r-smb-04",
+    "url": "https://demo.local/reddit/smb-04",
+    "title": "Quoting takes me longer than the actual job",
+    "content": "Landscaping. Every quote is the same: drive out, measure, go home, type it into a Word template, PDF it, email it, forget to follow up. A phone-first tool that builds the quote on site and nags the customer for me would win my money instantly. Everything I tried is either a CRM monster or a generic form builder.",
+    "author": "green_thumb_greg",
+    "created_days_ago": 18,
+    "engagement": {
+      "votes": 93,
+      "comments": 47
+    },
+    "metadata": {
+      "subreddit": "sweatystartup"
+    }
+  },
+  {
+    "case": "smb_automation",
+    "source": "mock-hn",
+    "adapter": "hackernews",
+    "external_id": "hn-smb-01",
+    "url": "https://demo.local/hn/smb-01",
+    "title": "Ask HN: Why is automation still so hard for non-technical small businesses?",
+    "content": "My sister runs a bakery. She wants three things: remind customers about pickups, ask for reviews, and reorder flour when it's low. Every tool assumes a marketing department. She ended up with a whiteboard and me on speed dial. There's a huge gap between 'consumer app' and 'enterprise workflow tool' here.",
+    "author": "bakery_brother",
+    "created_days_ago": 4,
+    "engagement": {
+      "votes": 244,
+      "comments": 163
+    },
+    "metadata": {
+      "hn_type": "story"
+    }
+  },
+  {
+    "case": "smb_automation",
+    "source": "mock-hn",
+    "adapter": "hackernews",
+    "external_id": "hn-smb-02",
+    "url": "https://demo.local/hn/smb-02",
+    "title": "Ask HN: Why is automation still so hard for non-technical small businesses?",
+    "content": "I built an internal tool for a friend's dental office that texts reminders and requests reviews. Took a weekend. They said they'd have paid $50/month for it years ago. The existing options were either bundled into a $300/month practice suite or required Zapier-level setup.",
+    "author": "dental_weekend",
+    "created_days_ago": 5,
+    "engagement": {
+      "votes": 91,
+      "comments": 0
+    },
+    "metadata": {
+      "hn_type": "comment"
+    }
+  },
+  {
+    "case": "smb_automation",
+    "source": "mock-hn",
+    "adapter": "hackernews",
+    "external_id": "hn-smb-03",
+    "url": "https://demo.local/hn/smb-03",
+    "title": "Ask HN: Why is automation still so hard for non-technical small businesses?",
+    "content": "The failure mode is always the same: the owner doesn't want to 'build an automation', they want to tick a box that says 'send reminders'. Pre-built, industry-specific recipes with zero configuration would beat a general-purpose builder for this segment every time.",
+    "author": "recipes_not_builders",
+    "created_days_ago": 7,
+    "engagement": {
+      "votes": 77,
+      "comments": 0
+    },
+    "metadata": {
+      "hn_type": "comment"
+    }
+  },
+  {
+    "case": "smb_automation",
+    "source": "mock-github",
+    "adapter": "github_issues",
+    "external_id": "gh-smb-01",
+    "url": "https://demo.local/github/smb-01",
+    "title": "Simple SMS reminder template for appointment-based businesses",
+    "content": "Using this open-source booking tool for a small clinic. Sending reminders currently requires configuring a webhook and an external SMS provider. A built-in 'remind 24h before' toggle would cover 90% of small businesses that just want fewer no-shows.",
+    "author": "clinic_admin",
+    "created_days_ago": 22,
+    "engagement": {
+      "votes": 33,
+      "comments": 11
+    },
+    "metadata": {
+      "repo": "demo/booking-oss",
+      "labels": [
+        "enhancement"
+      ]
+    }
+  },
+  {
+    "case": "noise",
+    "source": "mock-hn",
+    "adapter": "hackernews",
+    "external_id": "hn-noise-01",
+    "url": "https://demo.local/hn/noise-01",
+    "title": "Rust 1.99 released",
+    "content": "The Rust team is happy to announce a new version of Rust. This release includes improvements to the borrow checker diagnostics and stabilizes several standard library APIs. Read the full release notes for details.",
+    "author": "rust_release_bot",
+    "created_days_ago": 3,
+    "engagement": {
+      "votes": 420,
+      "comments": 210
+    },
+    "metadata": {
+      "hn_type": "story"
+    }
+  },
+  {
+    "case": "noise",
+    "source": "mock-hn",
+    "adapter": "hackernews",
+    "external_id": "hn-noise-02",
+    "url": "https://demo.local/hn/noise-02",
+    "title": "The history of the Antikythera mechanism",
+    "content": "A long-form article on the discovery, reconstruction and modern interpretations of the ancient Greek astronomical calculator, with new X-ray tomography images of the gear train.",
+    "author": "history_buff",
+    "created_days_ago": 5,
+    "engagement": {
+      "votes": 380,
+      "comments": 95
+    },
+    "metadata": {
+      "hn_type": "story"
+    }
+  },
+  {
+    "case": "noise",
+    "source": "mock-reddit",
+    "adapter": "reddit",
+    "external_id": "r-noise-01",
+    "url": "https://demo.local/reddit/noise-01",
+    "title": "Just hit $10k MRR, AMA",
+    "content": "Two years of building, finally crossed ten thousand in monthly recurring revenue with my SaaS. Happy to answer questions about pricing experiments and cold outreach.",
+    "author": "mrr_milestone",
+    "created_days_ago": 2,
+    "engagement": {
+      "votes": 900,
+      "comments": 350
+    },
+    "metadata": {
+      "subreddit": "SaaS"
+    }
+  },
+  {
+    "case": "noise",
+    "source": "mock-reddit",
+    "adapter": "reddit",
+    "external_id": "r-noise-02",
+    "url": "https://demo.local/reddit/noise-02",
+    "title": "Weekly self-promotion thread",
+    "content": "Share what you are working on this week. Please keep it to one comment per project and be kind to each other.",
+    "author": "AutoModerator",
+    "created_days_ago": 1,
+    "engagement": {
+      "votes": 12,
+      "comments": 140
+    },
+    "metadata": {
+      "subreddit": "SaaS"
+    }
+  },
+  {
+    "case": "noise",
+    "source": "mock-github",
+    "adapter": "github_issues",
+    "external_id": "gh-noise-01",
+    "url": "https://demo.local/github/noise-01",
+    "title": "Typo in README",
+    "content": "The word 'recieve' should be 'receive' in the installation section. Happy to open a PR.",
+    "author": "typo_hunter",
+    "created_days_ago": 4,
+    "engagement": {
+      "votes": 1,
+      "comments": 1
+    },
+    "metadata": {
+      "repo": "demo/anything",
+      "labels": [
+        "documentation"
+      ]
+    }
+  }
+]

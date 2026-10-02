@@ -1,724 +1,726 @@
-version: 4
+version: 5
 
-# TrendRadar 3.1 商业信号源注册表
+# Opportunity Radar source registry.
 #
-# role:
-#   PRIMARY   第一方/官方/原始数据
-#   VERIFIER  高质量独立媒体/研究
-#   DISCOVERY 社区/作者/论坛，仅负责发现线索
+# kind:    demand (people describing problems) | supply (products that exist) | hybrid | story (editorial feeds for the brief)
+# mode:    live | mock  — mock sources serve bundled fixtures and are always labelled as such in the UI.
+# adapter: hackernews | reddit | github_issues | github_repos | producthunt | rss | html | mock
 #
-# tier:
-#   1 核心源：每日稳定抓，商业信号密度高
-#   2 重要源：每日抓但限额更低
-#   3 行业源：补充行业结构变化
-#   4 Discovery：只发现线索，不独立形成高置信结论
-#
-# quality:
-#   reliability / business_value / noise / accuracy 取值 0-100
-#   max_per_round 控制单轮抓取上限，防止低产出源淹没候选池
+# Live sources that need no API key: hackernews. Product Hunt needs PRODUCTHUNT_TOKEN (else it falls
+# back to mock automatically). GitHub works without a token at low rate limits. Reddit is opt-in.
 
 sources:
-  # ===== AI / 软件商业化：一级第一方 =====
+  # ───────── demand: live ─────────
+  - id: hn
+    name: Hacker News
+    adapter: hackernews
+    kind: demand
+    mode: live
+    enabled: true
+    reliability: 80
+    max_per_round: 60
+    window_days: 30
+    queries:
+      - "is there a tool that"
+      - "I hate that I have to"
+      - "alternative to"
+      - "every time I have to manually"
+      - "I wrote a script to"
+      - "why is there no"
+      - "too expensive for a solo"
+      - "wish there was an app"
+
+  - id: github-issues
+    name: GitHub Issues
+    adapter: github_issues
+    kind: demand
+    mode: live
+    enabled: true
+    reliability: 75
+    max_per_round: 40
+    window_days: 60
+    queries:
+      - "feature request workaround manually"
+      - "would pay for"
+      - "is:open label:enhancement \"would be great if\""
+
+  - id: reddit
+    name: Reddit
+    adapter: reddit
+    kind: demand
+    mode: live
+    enabled: true          # effective only when REDDIT_ENABLED=true and REDDIT_USER_AGENT is set
+    reliability: 70
+    max_per_round: 80
+    window_days: 30
+    subreddits: [SaaS, Entrepreneur, webdev, productivity, macapps, freelance, smallbusiness, ClaudeAI, cursor]
+    queries:
+      - "is there a tool"
+      - "I hate"
+      - "alternative to"
+      - "manually every"
+
+  # ───────── supply: live (or auto-mock without token) ─────────
+  - id: producthunt
+    name: Product Hunt
+    adapter: producthunt
+    kind: supply
+    mode: live
+    enabled: true
+    reliability: 85
+    max_per_round: 60
+    window_days: 90
+    topics: [developer-tools, productivity, artificial-intelligence, saas, mac, chrome-extensions, no-code]
+
+  - id: github-repos
+    name: GitHub Repositories
+    adapter: github_repos
+    kind: supply
+    mode: live
+    enabled: true
+    reliability: 75
+    max_per_round: 30
+    window_days: 365
+    queries: []            # used on demand by Explore / competition search
+
+  # ───────── demand: mock fixtures (3 demo scenarios) ─────────
+  - id: mock-reddit
+    name: Reddit (demo fixtures)
+    adapter: mock
+    kind: demand
+    mode: mock
+    enabled: true
+    reliability: 50
+    note: "Hand-written demo threads. Never presented as live data."
+  - id: mock-hn
+    name: Hacker News (demo fixtures)
+    adapter: mock
+    kind: demand
+    mode: mock
+    enabled: true
+    reliability: 50
+  - id: mock-github
+    name: GitHub Issues (demo fixtures)
+    adapter: mock
+    kind: demand
+    mode: mock
+    enabled: true
+    reliability: 50
+
+  # ───────── story: editorial sources for the daily brief (ported from TrendRadar 3.1) ─────────
+  # lane: AI_COMMERCIALIZATION | INDUSTRY | COMPANY | BUSINESS_MODEL | GLOBALIZATION
+  # tier 1 = first-party/official, high signal density; 2 = strong independent; 3 = sector trade press.
+  # Disabled rows are paywalled, bot-blocked or JS-rendered; enable after checking `trendradar sources --test`.
   - id: openai-news
     name: OpenAI News
+    adapter: rss
+    kind: story
+    mode: live
+    enabled: true
     lane: AI_COMMERCIALIZATION
-    role: PRIMARY
-    type: rss
-    url: https://openai.com/news/rss.xml
     tier: 1
     reliability: 92
-    business_value: 78
-    noise: 10
-    accuracy: 90
-    window_days: 30
-    scan_limit: 80
     max_per_round: 12
-    note: "沿用 intel-workbench 已实测的官方 RSS；先扫30天窗口再应用单轮额度。"
-
+    window_days: 30
+    url: https://openai.com/news/rss.xml
+    note: 沿用 intel-workbench 已实测的官方 RSS；先扫30天窗口再应用单轮额度。
   - id: anthropic-news
     name: Anthropic News
+    adapter: html
+    kind: story
+    mode: live
+    enabled: true
     lane: AI_COMMERCIALIZATION
-    role: PRIMARY
-    type: html
-    url: https://www.anthropic.com/news
-    include: "/news/"
     tier: 1
     reliability: 88
-    business_value: 80
-    noise: 18
-    accuracy: 86
     max_per_round: 12
-
+    window_days: 14
+    url: https://www.anthropic.com/news
+    include: /news/
+    enrich_limit: 5
   - id: google-deepmind
     name: Google DeepMind
+    adapter: html
+    kind: story
+    mode: live
+    enabled: true
     lane: AI_COMMERCIALIZATION
-    role: PRIMARY
-    type: html
-    url: https://deepmind.google/discover/blog/
-    include: "/discover/blog/"
     tier: 1
     reliability: 88
-    business_value: 66
-    noise: 30
-    accuracy: 86
     max_per_round: 8
-
+    window_days: 14
+    url: https://deepmind.google/discover/blog/
+    include: /discover/blog/
+    enrich_limit: 5
   - id: google-ai-keyword
     name: Google · The Keyword AI
+    adapter: rss
+    kind: story
+    mode: live
+    enabled: true
     lane: AI_COMMERCIALIZATION
-    role: PRIMARY
-    type: rss
-    url: https://blog.google/technology/ai/rss/
     tier: 1
     reliability: 84
-    business_value: 72
-    noise: 26
-    accuracy: 82
     max_per_round: 10
-
+    window_days: 14
+    url: https://blog.google/technology/ai/rss/
   - id: microsoft-ai
     name: Microsoft AI
+    adapter: html
+    kind: story
+    mode: live
+    enabled: true
     lane: AI_COMMERCIALIZATION
-    role: PRIMARY
-    type: html
-    url: https://blogs.microsoft.com/ai/
-    include: "/ai/"
     tier: 1
     reliability: 86
-    business_value: 78
-    noise: 24
-    accuracy: 84
     max_per_round: 10
-    enabled: false
-    note: "GitHub Runner 与本地 intel-workbench 均实测 403；保留登记，等待专用 adapter，不再让通用采集器重复撞墙。"
-
+    window_days: 14
+    url: https://blogs.microsoft.com/ai/
+    include: /ai/
+    enrich_limit: 5
+    note: GitHub Runner 与本地 intel-workbench 均实测 403；保留登记，等待专用 adapter，不再让通用采集器重复撞墙。
   - id: meta-ai
     name: Meta AI
+    adapter: html
+    kind: story
+    mode: live
+    enabled: true
     lane: AI_COMMERCIALIZATION
-    role: PRIMARY
-    type: html
-    url: https://ai.meta.com/blog/
-    include: "/blog/"
     tier: 1
     reliability: 84
-    business_value: 66
-    noise: 30
-    accuracy: 82
     max_per_round: 8
-
+    window_days: 14
+    url: https://ai.meta.com/blog/
+    include: /blog/
+    enrich_limit: 5
   - id: aws-machine-learning
     name: AWS Machine Learning
+    adapter: rss
+    kind: story
+    mode: live
+    enabled: true
     lane: AI_COMMERCIALIZATION
-    role: PRIMARY
-    type: rss
-    url: https://aws.amazon.com/blogs/machine-learning/feed/
     tier: 1
     reliability: 82
-    business_value: 68
-    noise: 28
-    accuracy: 82
     max_per_round: 10
-
+    window_days: 14
+    url: https://aws.amazon.com/blogs/machine-learning/feed/
   - id: github-blog
     name: GitHub Blog
+    adapter: rss
+    kind: story
+    mode: live
+    enabled: true
     lane: AI_COMMERCIALIZATION
-    role: PRIMARY
-    type: rss
-    url: https://github.blog/feed/
     tier: 1
     reliability: 80
-    business_value: 64
-    noise: 30
-    accuracy: 80
     max_per_round: 8
-
+    window_days: 14
+    url: https://github.blog/feed/
   - id: stripe-blog
     name: Stripe
+    adapter: rss
+    kind: story
+    mode: live
+    enabled: true
     lane: BUSINESS_MODEL
-    role: PRIMARY
-    type: rss
-    url: https://stripe.com/blog/feed.rss
     tier: 1
     reliability: 82
-    business_value: 82
-    noise: 14
-    accuracy: 82
     max_per_round: 10
-
-  # ===== 公司 / 资本 / 商业 =====
+    window_days: 14
+    url: https://stripe.com/blog/feed.rss
   - id: sec-edgar
     name: SEC EDGAR
+    adapter: html
+    kind: story
+    mode: live
+    enabled: false
     lane: COMPANY
-    role: PRIMARY
-    type: html
-    url: https://www.sec.gov/edgar/search/
     tier: 1
     reliability: 98
-    business_value: 90
-    noise: 8
-    accuracy: 98
     max_per_round: 12
-    enabled: false
-    note: "需要专用 filing adapter；先登记，不用通用 HTML 抓取。"
-
+    window_days: 14
+    url: https://www.sec.gov/edgar/search/
+    enrich_limit: 5
+    note: 需要专用 filing adapter；先登记，不用通用 HTML 抓取。
   - id: yc-companies
     name: Y Combinator Companies
+    adapter: html
+    kind: story
+    mode: live
+    enabled: false
     lane: BUSINESS_MODEL
-    role: PRIMARY
-    type: html
-    url: https://www.ycombinator.com/companies
-    include: "/companies/"
     tier: 2
     reliability: 78
-    business_value: 74
-    noise: 34
-    accuracy: 76
     max_per_round: 6
-
+    window_days: 14
+    url: https://www.ycombinator.com/companies
+    include: /companies/
+    enrich_limit: 5
   - id: reuters-business
     name: Reuters Business
+    adapter: html
+    kind: story
+    mode: live
+    enabled: false
     lane: COMPANY
-    role: VERIFIER
-    type: html
-    url: https://www.reuters.com/business/
-    include: "/business/"
     tier: 1
     reliability: 92
-    business_value: 88
-    noise: 12
-    accuracy: 92
-    max_per_round: 14
-    enabled: false
-    note: "GitHub Runner 实测 401，且本地 intel-workbench 记录为不可达；暂停直抓，使用可达高质量财经源补位。"
-
+    max_per_round: 12
+    window_days: 14
+    url: https://www.reuters.com/business/
+    include: /business/
+    enrich_limit: 5
+    note: GitHub Runner 实测 401，且本地 intel-workbench 记录为不可达；暂停直抓，使用可达高质量财经源补位。
   - id: reuters-technology
     name: Reuters Technology
+    adapter: html
+    kind: story
+    mode: live
+    enabled: false
     lane: AI_COMMERCIALIZATION
-    role: VERIFIER
-    type: html
-    url: https://www.reuters.com/technology/
-    include: "/technology/"
     tier: 1
     reliability: 92
-    business_value: 84
-    noise: 14
-    accuracy: 92
     max_per_round: 12
-    enabled: false
-    note: "GitHub Runner 实测 401，且本地 intel-workbench 记录为不可达；暂停直抓，使用可达高质量财经源补位。"
-
+    window_days: 14
+    url: https://www.reuters.com/technology/
+    include: /technology/
+    enrich_limit: 5
+    note: GitHub Runner 实测 401，且本地 intel-workbench 记录为不可达；暂停直抓，使用可达高质量财经源补位。
   - id: financial-times
     name: Financial Times
+    adapter: html
+    kind: story
+    mode: live
+    enabled: false
     lane: COMPANY
-    role: VERIFIER
-    type: html
-    url: https://www.ft.com/companies
-    include: "/content/"
     tier: 1
     reliability: 90
-    business_value: 90
-    noise: 12
-    accuracy: 90
     max_per_round: 12
-    enabled: false
-    note: "GitHub Runner 实测 403，且本地 intel-workbench 记录为不可达；暂停直抓，使用 Sifted/Fortune 等可达源补位。"
-
+    window_days: 14
+    url: https://www.ft.com/companies
+    include: /content/
+    enrich_limit: 5
+    note: GitHub Runner 实测 403，且本地 intel-workbench 记录为不可达；暂停直抓，使用 Sifted/Fortune 等可达源补位。
   - id: techcrunch
     name: TechCrunch
+    adapter: rss
+    kind: story
+    mode: live
+    enabled: true
     lane: BUSINESS_MODEL
-    role: VERIFIER
-    type: rss
-    url: https://techcrunch.com/feed/
     tier: 2
     reliability: 76
-    business_value: 78
-    noise: 34
-    accuracy: 74
     max_per_round: 8
-
+    window_days: 14
+    url: https://techcrunch.com/feed/
   - id: sifted
     name: Sifted
+    adapter: rss
+    kind: story
+    mode: live
+    enabled: true
     lane: BUSINESS_MODEL
-    role: VERIFIER
-    type: rss
-    url: https://sifted.eu/feed
     tier: 2
     reliability: 82
-    business_value: 80
-    noise: 18
-    accuracy: 82
     max_per_round: 8
-
+    window_days: 14
+    url: https://sifted.eu/feed
   - id: tech-eu
     name: Tech.eu
+    adapter: rss
+    kind: story
+    mode: live
+    enabled: false
     lane: BUSINESS_MODEL
-    role: VERIFIER
-    type: rss
-    url: https://tech.eu/feed/
     tier: 3
     reliability: 74
-    business_value: 72
-    noise: 26
-    accuracy: 74
     max_per_round: 6
-
-
+    window_days: 14
+    url: https://tech.eu/feed/
   - id: fortune
     name: Fortune
+    adapter: rss
+    kind: story
+    mode: live
+    enabled: true
     lane: COMPANY
-    role: VERIFIER
-    type: rss
-    url: https://fortune.com/feed/
     tier: 2
     reliability: 84
-    business_value: 80
-    noise: 30
-    accuracy: 84
-    window_days: 3
-    scan_limit: 60
     max_per_round: 6
-    note: "intel-workbench 本地实测可达；补足全球公司与高管层面的商业变化。"
-
+    window_days: 3
+    url: https://fortune.com/feed/
+    note: intel-workbench 本地实测可达；补足全球公司与高管层面的商业变化。
   - id: marketwatch
     name: MarketWatch
+    adapter: rss
+    kind: story
+    mode: live
+    enabled: false
     lane: COMPANY
-    role: VERIFIER
-    type: rss
-    url: https://feeds.content.dowjones.io/public/rss/mw_topstories
     tier: 3
     reliability: 82
-    business_value: 78
-    noise: 34
-    accuracy: 82
-    window_days: 3
-    scan_limit: 60
     max_per_round: 6
-    note: "用于观察市场反应与投资者预期，不单独支撑结构性结论。"
-
+    window_days: 3
+    url: https://feeds.content.dowjones.io/public/rss/mw_topstories
+    note: 用于观察市场反应与投资者预期，不单独支撑结构性结论。
   - id: cnbc-top
     name: CNBC · Top News
+    adapter: rss
+    kind: story
+    mode: live
+    enabled: false
     lane: COMPANY
-    role: VERIFIER
-    type: rss
-    url: https://www.cnbc.com/id/100003114/device/rss/rss.html
     tier: 3
     reliability: 82
-    business_value: 78
-    noise: 32
-    accuracy: 82
-    window_days: 3
-    scan_limit: 60
     max_per_round: 6
-
+    window_days: 3
+    url: https://www.cnbc.com/id/100003114/device/rss/rss.html
   - id: nber
     name: NBER
+    adapter: rss
+    kind: story
+    mode: live
+    enabled: true
     lane: BUSINESS_MODEL
-    role: VERIFIER
-    type: rss
-    url: https://www.nber.org/rss/new.xml
     tier: 1
     reliability: 94
-    business_value: 78
-    noise: 10
-    accuracy: 92
-    window_days: 30
-    scan_limit: 40
     max_per_round: 10
-    note: "GitHub Runner 实测 403；保留为研究层候选源，后续用专用 adapter/on-demand 方式接入，不进入每日主采集。"
-
-    enabled: false
+    window_days: 30
+    url: https://www.nber.org/rss/new.xml
+    note: GitHub Runner 实测 403；保留为研究层候选源，后续用专用 adapter/on-demand 方式接入，不进入每日主采集。
   - id: rand
     name: RAND
+    adapter: rss
+    kind: story
+    mode: live
+    enabled: true
     lane: INDUSTRY
-    role: VERIFIER
-    type: rss
-    url: https://www.rand.org/news.xml
     tier: 2
     reliability: 90
-    business_value: 74
-    noise: 16
-    accuracy: 88
-    window_days: 30
-    scan_limit: 25
     max_per_round: 8
-    note: "GitHub Runner 实测 403；保留为研究层候选源，后续用专用 adapter/on-demand 方式接入，不进入每日主采集。"
-
-  # ===== 产业 / 能源 / 制造 =====
-    enabled: false
+    window_days: 30
+    url: https://www.rand.org/news.xml
+    note: GitHub Runner 实测 403；保留为研究层候选源，后续用专用 adapter/on-demand 方式接入，不进入每日主采集。
   - id: nvidia-blog
     name: NVIDIA Blog
+    adapter: html
+    kind: story
+    mode: live
+    enabled: true
     lane: INDUSTRY
-    role: PRIMARY
-    type: html
-    url: https://blogs.nvidia.com/
-    include: "/blog/|/data-center/|/industries/"
     tier: 1
     reliability: 84
-    business_value: 78
-    noise: 24
-    accuracy: 82
     max_per_round: 10
-
+    window_days: 14
+    url: https://blogs.nvidia.com/
+    include: /blog/|/data-center/|/industries/
+    enrich_limit: 5
   - id: iea
     name: International Energy Agency
+    adapter: html
+    kind: story
+    mode: live
+    enabled: true
     lane: INDUSTRY
-    role: PRIMARY
-    type: html
-    url: https://www.iea.org/news
-    include: "/news/"
     tier: 1
     reliability: 94
-    business_value: 76
-    noise: 10
-    accuracy: 94
     max_per_round: 8
-    enabled: false
-    note: "GitHub Runner 实测 403；等待专用 feed/API adapter，避免每天制造失败噪声。"
-
+    window_days: 14
+    url: https://www.iea.org/news
+    include: /news/
+    enrich_limit: 5
+    note: GitHub Runner 实测 403；等待专用 feed/API adapter，避免每天制造失败噪声。
   - id: semiconductor-industry-association
     name: Semiconductor Industry Association
+    adapter: html
+    kind: story
+    mode: live
+    enabled: true
     lane: INDUSTRY
-    role: PRIMARY
-    type: html
-    url: https://www.semiconductors.org/category/press-releases/
-    include: "/press-releases/"
     tier: 1
     reliability: 84
-    business_value: 82
-    noise: 20
-    accuracy: 84
     max_per_round: 8
-    enabled: false
-    note: "GitHub Runner 实测 403；等待专用 feed/adapter，避免通用 HTML 抓取反复失败。"
-
+    window_days: 14
+    url: https://www.semiconductors.org/category/press-releases/
+    include: /press-releases/
+    enrich_limit: 5
+    note: GitHub Runner 实测 403；等待专用 feed/adapter，避免通用 HTML 抓取反复失败。
   - id: ifr
     name: International Federation of Robotics
+    adapter: html
+    kind: story
+    mode: live
+    enabled: true
     lane: INDUSTRY
-    role: PRIMARY
-    type: html
-    url: https://ifr.org/ifr-press-releases
-    include: "/ifr-press-releases/"
     tier: 1
     reliability: 86
-    business_value: 80
-    noise: 18
-    accuracy: 86
     max_per_round: 8
-
+    window_days: 14
+    url: https://ifr.org/ifr-press-releases
+    include: /ifr-press-releases/
+    enrich_limit: 5
   - id: supply-chain-dive
     name: Supply Chain Dive
+    adapter: rss
+    kind: story
+    mode: live
+    enabled: true
     lane: INDUSTRY
-    role: VERIFIER
-    type: rss
-    url: https://www.supplychaindive.com/feeds/news/
     tier: 3
     reliability: 76
-    business_value: 72
-    noise: 24
-    accuracy: 76
     max_per_round: 6
-
+    window_days: 14
+    url: https://www.supplychaindive.com/feeds/news/
   - id: manufacturing-dive
     name: Manufacturing Dive
+    adapter: rss
+    kind: story
+    mode: live
+    enabled: false
     lane: INDUSTRY
-    role: VERIFIER
-    type: rss
-    url: https://www.manufacturingdive.com/feeds/news/
     tier: 3
     reliability: 76
-    business_value: 74
-    noise: 24
-    accuracy: 76
     max_per_round: 6
-
+    window_days: 14
+    url: https://www.manufacturingdive.com/feeds/news/
   - id: utility-dive
     name: Utility Dive
+    adapter: rss
+    kind: story
+    mode: live
+    enabled: false
     lane: INDUSTRY
-    role: VERIFIER
-    type: rss
-    url: https://www.utilitydive.com/feeds/news/
     tier: 3
     reliability: 76
-    business_value: 74
-    noise: 26
-    accuracy: 76
     max_per_round: 6
-
+    window_days: 14
+    url: https://www.utilitydive.com/feeds/news/
   - id: retail-dive
     name: Retail Dive
+    adapter: rss
+    kind: story
+    mode: live
+    enabled: false
     lane: BUSINESS_MODEL
-    role: VERIFIER
-    type: rss
-    url: https://www.retaildive.com/feeds/news/
     tier: 3
     reliability: 76
-    business_value: 72
-    noise: 28
-    accuracy: 76
     max_per_round: 6
-
+    window_days: 14
+    url: https://www.retaildive.com/feeds/news/
   - id: banking-dive
     name: Banking Dive
+    adapter: rss
+    kind: story
+    mode: live
+    enabled: false
     lane: COMPANY
-    role: VERIFIER
-    type: rss
-    url: https://www.bankingdive.com/feeds/news/
     tier: 3
     reliability: 76
-    business_value: 72
-    noise: 24
-    accuracy: 76
     max_per_round: 6
-
+    window_days: 14
+    url: https://www.bankingdive.com/feeds/news/
   - id: construction-physics
     name: Construction Physics
+    adapter: html
+    kind: story
+    mode: live
+    enabled: true
     lane: INDUSTRY
-    role: VERIFIER
-    type: html
-    url: https://www.construction-physics.com/
-    include: "/p/"
     tier: 2
     reliability: 84
-    business_value: 74
-    noise: 12
-    accuracy: 82
     max_per_round: 6
-
-  # ===== 中国商业映射 =====
+    window_days: 14
+    url: https://www.construction-physics.com/
+    include: /p/
+    enrich_limit: 5
   - id: china-nbs
     name: 国家统计局 · 数据发布
+    adapter: html
+    kind: story
+    mode: live
+    enabled: true
     lane: INDUSTRY
-    role: PRIMARY
-    type: html
-    url: https://www.stats.gov.cn/sj/zxfb/
-    include: "/sj/zxfb/\\d{6}/t\\d{8}_\\d+\\.html"
     tier: 1
     reliability: 95
-    business_value: 78
-    noise: 8
-    accuracy: 95
+    max_per_round: 12
     window_days: 30
-    scan_limit: 40
-    max_per_round: 15
-    note: "中国经济判断的数据底座；采用 intel-workbench 实测的列表路径规则。"
-
+    url: https://www.stats.gov.cn/sj/zxfb/
+    include: /sj/zxfb/\d{6}/t\d{8}_\d+\.html
+    enrich_limit: 5
+    note: 中国经济判断的数据底座；采用 intel-workbench 实测的列表路径规则。
   - id: china-customs
     name: 海关总署
+    adapter: html
+    kind: story
+    mode: live
+    enabled: false
     lane: GLOBALIZATION
-    role: PRIMARY
-    type: html
-    url: http://www.customs.gov.cn/
     tier: 1
     reliability: 94
-    business_value: 84
-    noise: 12
-    accuracy: 94
     max_per_round: 8
-    enabled: false
-    note: "站点结构不稳定，后续做专用 adapter。"
-
+    window_days: 14
+    url: http://www.customs.gov.cn/
+    enrich_limit: 5
+    note: 站点结构不稳定，后续做专用 adapter。
   - id: mofcom
     name: 商务部
+    adapter: html
+    kind: story
+    mode: live
+    enabled: false
     lane: GLOBALIZATION
-    role: PRIMARY
-    type: html
-    url: https://www.mofcom.gov.cn/
     tier: 1
     reliability: 92
-    business_value: 82
-    noise: 14
-    accuracy: 92
     max_per_round: 8
-    enabled: false
-    note: "后续做专用 adapter。"
-
+    window_days: 14
+    url: https://www.mofcom.gov.cn/
+    enrich_limit: 5
+    note: 后续做专用 adapter。
   - id: miit
     name: 工业和信息化部
+    adapter: html
+    kind: story
+    mode: live
+    enabled: true
     lane: INDUSTRY
-    role: PRIMARY
-    type: html
-    url: https://www.miit.gov.cn/
-    include: "/xwfb/[a-z]+/art/\\d{4}/art_[0-9a-f]+\\.html"
     tier: 1
     reliability: 92
-    business_value: 84
-    noise: 12
-    accuracy: 92
-    window_days: 14
-    scan_limit: 30
     max_per_round: 10
-    note: "制造业与AI产业政策的一手证据；列表标题支持 title 属性兜底。"
-
-
+    window_days: 14
+    url: https://www.miit.gov.cn/
+    include: /xwfb/[a-z]+/art/\d{4}/art_[0-9a-f]+\.html
+    enrich_limit: 5
+    note: 制造业与AI产业政策的一手证据；列表标题支持 title 属性兜底。
   - id: china-pboc
     name: 中国人民银行
+    adapter: html
+    kind: story
+    mode: live
+    enabled: true
     lane: GLOBALIZATION
-    role: PRIMARY
-    type: html
-    url: https://www.pbc.gov.cn/
-    include: "/goutongjiaoliu/\\d+/\\d+/\\d+/index\\.html"
     tier: 1
     reliability: 94
-    business_value: 80
-    noise: 14
-    accuracy: 94
-    window_days: 14
-    scan_limit: 30
     max_per_round: 10
-    note: "货币政策、金融统计、跨境与支付的一手来源；不把“央行”本身当主题词。"
-
+    window_days: 14
+    url: https://www.pbc.gov.cn/
+    include: /goutongjiaoliu/\d+/\d+/\d+/index\.html
+    enrich_limit: 5
+    note: 货币政策、金融统计、跨境与支付的一手来源；不把“央行”本身当主题词。
   - id: caixin
     name: 财新网
+    adapter: html
+    kind: story
+    mode: live
+    enabled: true
     lane: COMPANY
-    role: VERIFIER
-    type: html
-    url: https://www.caixin.com/
-    include: "/\\d{4}-\\d{2}-\\d{2}/\\d+\\.html"
     tier: 2
     reliability: 88
-    business_value: 84
-    noise: 18
-    accuracy: 88
-    window_days: 7
-    scan_limit: 35
     max_per_round: 10
-    note: "中文财经深度验证源；采集器允许 caixin.com 同根子域链接。"
-
-  # ===== 独立商业 / 产品分析 =====
+    window_days: 7
+    url: https://www.caixin.com/
+    include: /\d{4}-\d{2}-\d{2}/\d+\.html
+    enrich_limit: 5
+    note: 中文财经深度验证源；采集器允许 caixin.com 同根子域链接。
   - id: stratechery
     name: Stratechery
+    adapter: html
+    kind: story
+    mode: live
+    enabled: true
     lane: COMPANY
-    role: VERIFIER
-    type: html
-    url: https://stratechery.com/
-    include: "/202"
     tier: 2
     reliability: 86
-    business_value: 88
-    noise: 10
-    accuracy: 84
     max_per_round: 6
-
+    window_days: 14
+    url: https://stratechery.com/
+    include: /202
+    enrich_limit: 5
   - id: one-useful-thing
     name: One Useful Thing
+    adapter: rss
+    kind: story
+    mode: live
+    enabled: true
     lane: AI_COMMERCIALIZATION
-    role: VERIFIER
-    type: rss
-    url: https://www.oneusefulthing.org/feed
     tier: 2
     reliability: 84
-    business_value: 76
-    noise: 10
-    accuracy: 82
     max_per_round: 6
-
+    window_days: 14
+    url: https://www.oneusefulthing.org/feed
   - id: interconnects
     name: Interconnects
+    adapter: rss
+    kind: story
+    mode: live
+    enabled: true
     lane: AI_COMMERCIALIZATION
-    role: VERIFIER
-    type: rss
-    url: https://www.interconnects.ai/feed
     tier: 2
     reliability: 82
-    business_value: 66
-    noise: 10
-    accuracy: 84
     max_per_round: 5
-
+    window_days: 14
+    url: https://www.interconnects.ai/feed
   - id: lennys-newsletter
     name: Lenny's Newsletter
+    adapter: rss
+    kind: story
+    mode: live
+    enabled: true
     lane: BUSINESS_MODEL
-    role: VERIFIER
-    type: rss
-    url: https://www.lennysnewsletter.com/feed
     tier: 2
     reliability: 80
-    business_value: 80
-    noise: 22
-    accuracy: 78
     max_per_round: 6
-
+    window_days: 14
+    url: https://www.lennysnewsletter.com/feed
   - id: saastr
     name: SaaStr
+    adapter: rss
+    kind: story
+    mode: live
+    enabled: true
     lane: BUSINESS_MODEL
-    role: VERIFIER
-    type: rss
-    url: https://www.saastr.com/feed/
     tier: 3
     reliability: 72
-    business_value: 78
-    noise: 34
-    accuracy: 70
     max_per_round: 6
-
+    window_days: 14
+    url: https://www.saastr.com/feed/
   - id: works-in-progress
     name: Works in Progress
+    adapter: html
+    kind: story
+    mode: live
+    enabled: true
     lane: BUSINESS_MODEL
-    role: VERIFIER
-    type: html
-    url: https://worksinprogress.co/
-    include: "/issue/|/article/"
     tier: 2
     reliability: 84
-    business_value: 72
-    noise: 12
-    accuracy: 82
     max_per_round: 5
-
-  # ===== Discovery：只负责发现线索 =====
-  - id: hacker-news
-    name: Hacker News
-    lane: BUSINESS_MODEL
-    role: DISCOVERY
-    type: rss
-    url: https://hnrss.org/frontpage
+    window_days: 14
+    url: https://worksinprogress.co/
+    include: /issue/|/article/
+    enrich_limit: 5
+  - id: mock-stories
+    name: 商业动态（演示数据）
+    adapter: mock
+    kind: story
+    mode: mock
+    enabled: true
+    reliability: 50
+    lane: OTHER
     tier: 4
-    reliability: 58
-    business_value: 64
-    noise: 62
-    accuracy: 58
-    max_per_round: 10
+    note: 虚构的演示新闻，仅用于展示简报与创作流程，绝不当作真实信息。
 
-  - id: reddit-startups
-    name: Reddit startups
-    lane: BUSINESS_MODEL
-    role: DISCOVERY
-    type: rss
-    url: https://www.reddit.com/r/startups/.rss
+  # ───────── story: 国内热榜聚合（移植自 ZJU-REAL/Easel 的热榜方案） ─────────
+  # 60s API 主源（https://60s.viki.moe/v2/*），xxapi 备用；免费公益接口，每日流水线一次足够。
+  - id: cn-hotlist
+    name: 国内热榜聚合（微博/抖音/知乎/头条/小红书/百度）
+    adapter: hotlist
+    kind: story
+    mode: live
+    enabled: true
+    lane: OTHER
     tier: 4
-    reliability: 54
-    business_value: 62
-    noise: 68
-    accuracy: 54
-    max_per_round: 8
-
-  - id: reddit-smallbusiness
-    name: Reddit smallbusiness
-    lane: BUSINESS_MODEL
-    role: DISCOVERY
-    type: rss
-    url: https://www.reddit.com/r/smallbusiness/.rss
-    tier: 4
-    reliability: 52
-    business_value: 64
-    noise: 66
-    accuracy: 52
-    max_per_round: 8
-
-    enabled: false
-    note: "GitHub Runner 并发采集实测 429，且噪声较高；日常关闭，保留 Hacker News 与 Reddit startups 作为 Discovery。"
-  - id: reddit-localllama
-    name: Reddit LocalLLaMA
-    lane: AI_COMMERCIALIZATION
-    role: DISCOVERY
-    type: rss
-    url: https://www.reddit.com/r/LocalLLaMA/.rss
-    tier: 4
-    reliability: 54
-    business_value: 58
-    noise: 70
-    accuracy: 54
-    max_per_round: 8
-
-    enabled: false
-    note: "GitHub Runner 并发采集实测 429，且与核心商业内容重合度有限；日常关闭，需要时做专题发现。"
+    reliability: 55
+    max_per_round: 60
+    note: 来自 Easel skills/shared/hotlist-apis.md 的已验证接口组合；聚合器信号，值得写与否交给 story 评估。
+    boards: [weibo, douyin, zhihu, toutiao, rednote, baidu]
+    per_board: 10

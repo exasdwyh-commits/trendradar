@@ -2,9 +2,20 @@
 .venv/
 __pycache__/
 *.pyc
+*.egg-info/
 .pytest_cache/
+# 本地跑测试/核验脚本时把 basetemp 指到仓库内（Windows 下系统 temp 可能被拒），
+# 这些目录是纯残渣，不要进版本库
+.pytest_tmp*/
+.tmp_verify/
+.tmp_launch/
+# 本地 AI 助手记忆目录
+.workbuddy/
+.mypy_cache/
+.ruff_cache/
 data/
 output/
 frontend/node_modules/
 frontend/dist/
 .DS_Store
+*.tsbuildinfo

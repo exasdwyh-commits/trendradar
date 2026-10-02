@@ -1,34 +1,38 @@
 app:
-  name: "硬币先生 · 商业趋势工作台"
+  name: "TrendRadar 写作台"
   timezone: "Asia/Shanghai"
-  daily_hour: 13
-  default_home_items: 3
-  max_home_items: 5
+  daily_hour: 1
 
 collection:
-  request_timeout_seconds: 18
-  per_source_limit: 18
-  article_enrich_limit: 6
+  request_timeout_seconds: 20
   max_workers: 6
-  user_agent: "TrendRadar-Business/3.0 (+personal research)"
-  lookback_hours: 72
 
-quality:
-  min_evidence_score: 40
-  high_confidence_requires:
-    - PRIMARY
-    - VERIFIER
-  discovery_can_support_high_confidence_alone: false
+pipeline:
+  rule_filter_min_score: 0.15        # 0..1 pain-lexicon score required to reach the classifier
+  classifier_min_relevance: 40       # 0..100 relevance required to be embedded/clustered
+  cluster_threshold_api: 0.45        # cosine, OpenAI-compatible embeddings
+  cluster_threshold_local: 0.10      # cosine, local hashed embeddings (degraded)
+  product_cluster_threshold_api: 0.50
+  product_cluster_threshold_local: 0.15
+  gate_min_signals: 3
+  gate_min_sources: 2
+  gate_min_velocity: 3.0
+  max_clusters_analyzed_per_run: 8
+  competitors_per_cluster: 8
 
-ranking:
-  fast_pool_size: 40
-  cognition_pool_size: 12
-  content_pool_size: 8
-  candidate_snapshot_size: 20
-  blind_sample_size: 10
-  homepage_items: 3
+scoring:
+  version: "v1"
+  weights:
+    pain: 0.15
+    demand: 0.15
+    growth: 0.10
+    competition: 0.15
+    gap: 0.15
+    monetization: 0.10
+    build_ease: 0.10
+    distribution: 0.05
 
-editorial:
-  china_mapping_required_for_write: true
-  thesis_confirmation_required: true
-  max_title_options: 4
+today:
+  min_score: 70
+  min_confidence: 60
+  max_items: 5
