@@ -1,3 +1,17 @@
+export type SignalState = {
+  status: 'NEW' | 'RISING' | 'TRACKING'
+  history_count: number
+  first_seen_at?: string
+  last_seen_at?: string
+  content_rank?: number
+  cognition_rank?: number
+  content_score?: number
+  score_delta?: number
+  rank_delta?: number
+  source_count?: number
+  source_delta?: number
+}
+
 export type Candidate = {
   id: string
   title: string
@@ -17,6 +31,15 @@ export type Candidate = {
   evidence_items?: number
   source_count?: number
   quality_source_count?: number
+  signal?: SignalState
+}
+
+export type SignalBoard = {
+  run_id?: string | null
+  run_at?: string | null
+  ranking_mode?: 'RULE' | 'FAST' | 'COGNITION' | null
+  summary: Record<'NEW' | 'RISING' | 'TRACKING', number>
+  items: Candidate[]
 }
 
 export type Evidence = {
