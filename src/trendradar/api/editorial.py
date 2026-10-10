@@ -4,8 +4,10 @@ import json
 import sqlite3
 
 from fastapi import APIRouter, Depends, HTTPException
+from fastapi.responses import HTMLResponse
 from pydantic import BaseModel
 
+from ..board import render_signal_board
 from ..judgement import list_judgements, review_judgement
 from ..pipeline import today
 from ..signals import enrich_candidates, signal_board
@@ -42,6 +44,10 @@ def _json_fields(data: dict, fields: list[str]) -> dict:
 
 def build_editorial_router(get_conn) -> APIRouter:
     router=APIRouter()
+
+    @router.get("/signal-board", response_class=HTMLResponse)
+    def html_signal_board(conn: sqlite3.Connection = Depends(get_conn)):
+        return HTMLResponse(render_signal_board(conn, 12))
 
     @router.get("/api/dashboard")
     def dashboard(conn: sqlite3.Connection = Depends(get_conn)):
