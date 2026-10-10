@@ -12,11 +12,22 @@ from ..evaluation import (
     latest_blind_round,
     submit_blind_round,
 )
+from ..learning import (
+    feedback_summary,
+    recent_candidate_feedback,
+    record_candidate_feedback,
+    source_health_history,
+)
 from ..llm import slot_status
 
 
 class BlindSubmitBody(BaseModel):
     picks: list[str]
+
+
+class CandidateFeedbackBody(BaseModel):
+    action: str
+    note: str = ""
 
 
 def build_ops_router(get_conn) -> APIRouter:
@@ -128,5 +139,33 @@ def build_ops_router(get_conn) -> APIRouter:
             """
         ).fetchall()
         return {"items":[dict(r) for r in rows]}
+
+    @router.get("/api/source-health/history")
+    def source_history(
+        days: int = 7,
+        limit: int = 500,
+        conn: sqlite3.Connection = Depends(get_conn),
+    ):
+        return source_health_history(conn, days=days, limit=limit)
+
+    @router.post("/api/candidates/{candidate_id}/feedback")
+    def candidate_feedback(
+        candidate_id: str,
+        body: CandidateFeedbackBody,
+        conn: sqlite3.Connection = Depends(get_conn),
+    ):
+        try:
+            return {"feedback":record_candidate_feedback(conn,candidate_id,body.action,body.note)}
+        except LookupError as exc:
+            raise HTTPException(404,str(exc)) from exc
+        except ValueError as exc:
+            raise HTTPException(400,str(exc)) from exc
+
+    @router.get("/api/feedback")
+    def feedback(limit: int = 100, conn: sqlite3.Connection = Depends(get_conn)):
+        return {
+            "items":recent_candidate_feedback(conn,limit),
+            "summary":feedback_summary(conn),
+        }
 
     return router
