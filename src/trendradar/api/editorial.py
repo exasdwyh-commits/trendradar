@@ -8,6 +8,7 @@ from pydantic import BaseModel
 
 from ..judgement import list_judgements, review_judgement
 from ..pipeline import today
+from ..signals import enrich_candidates, signal_board
 from ..trends import latest_world_model_update
 from ..writing import (
     article_detail,
@@ -52,14 +53,19 @@ def build_editorial_router(get_conn) -> APIRouter:
             """
         ).fetchall()
         return {
-            "today": today(conn, 3),
+            "today": enrich_candidates(conn, today(conn, 3)),
+            "signals": signal_board(conn, 12),
             "pending_decisions": [dict(x) for x in pending],
             "world_model": latest_world_model_update(conn),
         }
 
     @router.get("/api/today")
     def get_today(limit: int = 3, conn: sqlite3.Connection = Depends(get_conn)):
-        return {"items": today(conn, max(1,min(limit,5)))}
+        return {"items": enrich_candidates(conn, today(conn, max(1,min(limit,5))))}
+
+    @router.get("/api/signals")
+    def signals(limit: int = 12, conn: sqlite3.Connection = Depends(get_conn)):
+        return signal_board(conn, max(1,min(limit,50)))
 
     @router.get("/api/candidates")
     def candidates(limit: int = 30, conn: sqlite3.Connection = Depends(get_conn)):
@@ -67,7 +73,7 @@ def build_editorial_router(get_conn) -> APIRouter:
             "SELECT * FROM candidates ORDER BY updated_at DESC,content_score DESC LIMIT ?",
             (max(1,min(limit,100)),),
         ).fetchall()
-        return {"items":[dict(r) for r in rows]}
+        return {"items":enrich_candidates(conn,[dict(r) for r in rows])}
 
     @router.get("/api/candidates/{candidate_id}")
     def candidate(candidate_id: str, conn: sqlite3.Connection = Depends(get_conn)):
@@ -82,7 +88,7 @@ def build_editorial_router(get_conn) -> APIRouter:
             (row["cluster_id"],),
         ).fetchall()
         return {
-            "candidate":dict(row),
+            "candidate":enrich_candidates(conn,[dict(row)])[0],
             "evidence":[dict(x) for x in evidence],
             "research":latest_research(conn,candidate_id),
         }
