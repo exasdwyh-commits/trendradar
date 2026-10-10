@@ -3,7 +3,9 @@ from __future__ import annotations
 import sqlite3
 from pathlib import Path
 
-CURRENT_SCHEMA_VERSION = 5
+from .learning import ensure_learning_schema
+
+CURRENT_SCHEMA_VERSION = 6
 
 
 def connect(path: str | Path) -> sqlite3.Connection:
@@ -30,8 +32,8 @@ def migrate(conn: sqlite3.Connection) -> None:
     Forward-only compatibility for local SQLite files.
 
     TrendRadar has a single product line, but a user's local database may survive
-    many code updates. New columns must therefore be added explicitly instead of
-    relying on CREATE TABLE IF NOT EXISTS, which never mutates an existing table.
+    many code updates. New columns/tables must therefore be added explicitly
+    instead of relying on CREATE TABLE IF NOT EXISTS in schema.sql alone.
     """
     _ensure_column(conn, "sources", "tier", "INTEGER NOT NULL DEFAULT 3")
     _ensure_column(conn, "sources", "reliability", "INTEGER NOT NULL DEFAULT 70")
@@ -43,6 +45,7 @@ def migrate(conn: sqlite3.Connection) -> None:
     _ensure_column(conn, "sources", "max_per_round", "INTEGER")
     _ensure_column(conn, "blind_rounds", "candidate_run_id", "TEXT REFERENCES candidate_runs(id) ON DELETE SET NULL")
     _ensure_column(conn, "media_assets", "evidence_ids_json", "TEXT NOT NULL DEFAULT '[]'")
+    ensure_learning_schema(conn)
     conn.execute(f"PRAGMA user_version={CURRENT_SCHEMA_VERSION}")
     conn.commit()
 
